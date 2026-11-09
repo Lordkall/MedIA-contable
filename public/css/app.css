@@ -5,7 +5,7 @@
     --glass-card: rgba(15, 23, 42, 0.6);
     --glass-card-border: rgba(255, 255, 255, 0.08);
     --glass-border-glow: rgba(59, 130, 246, 0.3);
-    
+
     --primary: #3b82f6;
     --primary-glow: rgba(59, 130, 246, 0.35);
     --success: #10b981;
@@ -18,7 +18,7 @@
     --text-main: #f3f4f6;
     --text-muted: #9ca3af;
     --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif;
-    
+
     --sidebar-width: 270px;
 }
 
@@ -30,7 +30,7 @@
 
 body {
     background-color: var(--bg-base);
-    background-image: 
+    background-image:
         radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.15) 0px, transparent 50%),
         radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.12) 0px, transparent 50%),
         radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.1) 0px, transparent 50%);
@@ -407,10 +407,29 @@ body {
     display: inline-block;
 }
 
-.badge-tag-G { background: rgba(59, 130, 246, 0.2); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.4); }
-.badge-tag-E { background: rgba(16, 185, 129, 0.2); color: #86efac; border: 1px solid rgba(16, 185, 129, 0.4); }
-.badge-tag-A { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.4); }
-.badge-tag-R { background: rgba(245, 158, 11, 0.2); color: #fde68a; border: 1px solid rgba(245, 158, 11, 0.4); }
+.badge-tag-G {
+    background: rgba(59, 130, 246, 0.2);
+    color: #93c5fd;
+    border: 1px solid rgba(59, 130, 246, 0.4);
+}
+
+.badge-tag-E {
+    background: rgba(16, 185, 129, 0.2);
+    color: #86efac;
+    border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.badge-tag-A {
+    background: rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.badge-tag-R {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fde68a;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+}
 
 /* Modals */
 .modal-overlay {

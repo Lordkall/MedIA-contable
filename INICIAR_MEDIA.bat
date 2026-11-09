@@ -18,3 +18,4 @@ if %ERRORLEVEL% NEQ 0 (
     echo Ocurrio un error al iniciar. Verifique que Node.js este instalado.
     pause
 )
+
