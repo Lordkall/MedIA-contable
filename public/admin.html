@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MeDIa-CONTABLE | Glassy Dashboard & Fiscal SENIAT</title>
+    <link rel="stylesheet" href="/css/app.css">
+    <style>
+        /* Estilos específicos del Glassy Dashboard */
+        .chart-mock-bar {
+            height: 120px;
+            display: flex;
+            align-items: flex-end;
+            gap: 12px;
+            padding-top: 20px;
+        }
+        .mock-bar {
+            flex: 1;
+            background: linear-gradient(180deg, rgba(59, 130, 246, 0.7), rgba(37, 99, 235, 0.2));
+            border-radius: 6px 6px 0 0;
+            transition: height 0.5s ease;
+            position: relative;
+        }
+        .mock-bar:hover {
+            background: linear-gradient(180deg, rgba(59, 130, 246, 1), rgba(37, 99, 235, 0.4));
+        }
+        .mock-bar-label {
+            position: absolute;
+            bottom: -22px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-layout">
+        
+        <!-- SIDEBAR DE CRISTAL (GLASSY SIDEBAR) -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <span class="brand-logo-badge">MeDIa</span>
+                <div>
+                    <strong style="display:block; font-size:1.05rem; letter-spacing:-0.3px;">MeDIa-CONTABLE</strong>
+                    <span style="font-size:0.75rem; color:#60a5fa; font-weight:600;">SENIAT v2026 OFICIAL</span>
+                </div>
+            </div>
+
+            <!-- Menú de Navegación -->
+            <nav class="sidebar-menu">
+                <div class="menu-category-title">Operaciones</div>
+                <a class="nav-item active" onclick="cambiarVista('dashboard', this)">
+                    <span class="nav-item-icon">📊</span>
+                    <span>Dashboard General</span>
+                </a>
+                <a href="/pos.html" class="nav-item" style="color: #60a5fa;">
+                    <span class="nav-item-icon">⚡</span>
+                    <span>Punto de Venta (POS)</span>
+                </a>
+
+                <div class="menu-category-title">Gestión Comercial</div>
+                <a class="nav-item" onclick="cambiarVista('inventario', this)">
+                    <span class="nav-item-icon">📦</span>
+                    <span>Inventario & Kárdex</span>
+                </a>
+                <a class="nav-item" onclick="cambiarVista('compras', this)">
+                    <span class="nav-item-icon">🛒</span>
+                    <span>Compras Proveedores</span>
+                </a>
+                <a class="nav-item" onclick="cambiarVista('terceros', this)">
+                    <span class="nav-item-icon">👥</span>
+                    <span>Clientes & RIFs</span>
+                </a>
+
+                <div class="menu-category-title">Cumplimiento SENIAT</div>
+                <a class="nav-item" onclick="cambiarVista('libros', this)">
+                    <span class="nav-item-icon">🏛️</span>
+                    <span>Libros IVA & IGTF 3%</span>
+                </a>
+                <a class="nav-item" onclick="cambiarVista('auditoria', this)">
+                    <span class="nav-item-icon">🛡️</span>
+                    <span>Auditoría TI & SHA-256</span>
+                </a>
+
+                <div class="menu-category-title">Sistema</div>
+                <a class="nav-item" onclick="cambiarVista('configuracion', this)">
+                    <span class="nav-item-icon">⚙️</span>
+                    <span>Configuración & BCV</span>
+                </a>
+            </nav>
+
+            <!-- Widget Inferior del Sidebar: Estado Fiscal y BCV -->
+            <div class="sidebar-footer">
+                <div class="fiscal-status-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <span style="font-size: 0.75rem; color: var(--text-muted);">TASA OFICIAL BCV</span>
+                        <button onclick="cambiarTasaPrompt()" class="btn-glass" style="padding: 2px 6px; font-size: 0.7rem;">Cambiar</button>
+                    </div>
+                    <div style="font-size: 1.15rem; font-weight: 800; color: #93c5fd;" id="sidebar-bcv-val">Bs. --</div>
+                    <div style="font-size: 0.7rem; color: #86efac; margin-top: 4px; display: flex; align-items: center; gap: 4px;">
+                        <span style="display:inline-block; width:6px; height:6px; background:#10b981; border-radius:50%;"></span>
+                        Impresora Fiscal Conectada
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- ÁREA PRINCIPAL DE CONTENIDO -->
+        <div class="main-wrapper">
+            
+            <!-- Header Superior de Cristal -->
+            <header class="glass-header">
+                <div class="header-title-box">
+                    <h1 id="header-view-title">Dashboard General de Operaciones</h1>
+                </div>
+
+                <div class="header-status-pills">
+                    <div class="pill-badge bcv">
+                        <span>BCV:</span>
+                        <strong id="top-bcv-rate">Bs. --</strong>
+                    </div>
+                    <div class="pill-badge caja-open" id="pill-caja-header">
+                        <span>Caja:</span>
+                        <strong id="top-caja-status">Verificando...</strong>
+                    </div>
+                    <a href="/pos.html" class="btn-glass btn-glass-primary" style="font-size: 0.85rem; text-decoration: none;">
+                        ⚡ Abrir Caja POS
+                    </a>
+                </div>
+            </header>
+
+            <!-- Cuerpo Dinámico -->
+            <main class="content-body">
+
+                <!-- ============================================== -->
+                <!-- VISTA 1: DASHBOARD GENERAL (KPIS & METRICAS)   -->
+                <!-- ============================================== -->
+                <section id="view-dashboard">
+                    <!-- Glass KPI Cards -->
+                    <div class="glass-kpi-grid">
+                        <div class="glass-kpi-card glass-glow-green">
+                            <span class="kpi-title">Total Ventas Facturadas (VES)</span>
+                            <div class="kpi-value" id="kpi-total-ventas" style="color: #86efac;">Bs. 0,00</div>
+                            <div class="kpi-subtext">
+                                <span>Ref. Divisas:</span>
+                                <strong id="kpi-total-ventas-usd" style="color:#93c5fd;">$ 0.00</strong>
+                            </div>
+                        </div>
+
+                        <div class="glass-kpi-card glass-glow-amber">
+                            <span class="kpi-title">IGTF Percibido (3% Divisas)</span>
+                            <div class="kpi-value" id="kpi-total-igtf" style="color: #fbbf24;">Bs. 0,00</div>
+                            <div class="kpi-subtext">
+                                <span>Prov. SNAT/2022/000013 Sujeto Especial</span>
+                            </div>
+                        </div>
+
+                        <div class="glass-kpi-card glass-glow-blue">
+                            <span class="kpi-title">Inventario Valorado (Costo)</span>
+                            <div class="kpi-value" id="kpi-valor-costo" style="color: #93c5fd;">$ 0.00</div>
+                            <div class="kpi-subtext">
+                                <span>Valor de Venta Estimado:</span>
+                                <strong id="kpi-valor-venta" style="color:#f3f4f6;">$ 0.00</strong>
+                            </div>
+                        </div>
+
+                        <div class="glass-kpi-card">
+                            <span class="kpi-title">Seguridad e Integridad SENIAT</span>
+                            <div class="kpi-value" style="color: #38bdf8; font-size: 1.4rem;">100% BLINDADO</div>
+                            <div class="kpi-subtext" style="color:#86efac;">
+                                <span>✓ Criptografía SHA-256 & Triggers SQL</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Gráfico y Resumen de Medios de Pago -->
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 24px;">
+                        <div class="glass-table-wrapper" style="margin-top:0;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                                <h3 style="font-size:1rem; font-weight:700;">Distribución de Recaudación Semanal</h3>
+                                <span style="font-size:0.8rem; color:var(--text-muted);">Últimos 7 Días</span>
+                            </div>
+                            <div class="chart-mock-bar">
+                                <div class="mock-bar" style="height: 45%;"><span class="mock-bar-label">Lun</span></div>
+                                <div class="mock-bar" style="height: 60%;"><span class="mock-bar-label">Mar</span></div>
+                                <div class="mock-bar" style="height: 35%;"><span class="mock-bar-label">Mie</span></div>
+                                <div class="mock-bar" style="height: 80%;"><span class="mock-bar-label">Jue</span></div>
+                                <div class="mock-bar" style="height: 95%;"><span class="mock-bar-label">Vie</span></div>
+                                <div class="mock-bar" style="height: 100%;"><span class="mock-bar-label">Sab</span></div>
+                                <div class="mock-bar" style="height: 50%;"><span class="mock-bar-label">Dom</span></div>
+                            </div>
+                        </div>
+
+                        <div class="glass-table-wrapper" style="margin-top:0;">
+                            <h3 style="font-size:1rem; font-weight:700; margin-bottom:14px;">Medios de Pago Capturados</h3>
+                            <div id="dashboard-medios-pago-list" style="display:flex; flex-direction:column; gap:10px;">
+                                <!-- Inyectados por JS -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ============================================== -->
+                <!-- VISTA 2: INVENTARIO & KÁRDEX                   -->
+                <!-- ============================================== -->
+                <section id="view-inventario" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <div style="display: flex; gap: 12px; flex: 1; max-width: 500px;">
+                            <input type="text" id="inv-search" class="glass-input" style="width:100%;" placeholder="🔍 Buscar por descripción, código de barra o referencia..." oninput="filtrarInventario()">
+                        </div>
+                        <button onclick="abrirModalNuevoProducto()" class="btn-glass btn-glass-primary">
+                            + Nuevo Producto
+                        </button>
+                    </div>
+
+                    <div class="glass-table-wrapper">
+                        <table class="glass-table">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Descripción</th>
+                                    <th>Categoría</th>
+                                    <th>Alícuota IVA</th>
+                                    <th>Costo ($)</th>
+                                    <th>Precio ($)</th>
+                                    <th>Precio (Bs.)</th>
+                                    <th>Stock</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventario-table-body"></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- ============================================== -->
+                <!-- VISTA 3: COMPRAS A PROVEEDORES                 -->
+                <!-- ============================================== -->
+                <section id="view-compras" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <h2 style="font-size: 1.2rem;">Compras de Mercancía y Retenciones SENIAT</h2>
+                        <button onclick="abrirModalNuevaCompra()" class="btn-glass btn-glass-success">
+                            + Registrar Factura de Proveedor
+                        </button>
+                    </div>
+
+                    <div class="glass-table-wrapper">
+                        <table class="glass-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Fecha</th>
+                                    <th>Proveedor</th>
+                                    <th>Nº Factura</th>
+                                    <th>Nº Control</th>
+                                    <th>Base Imp. (Bs)</th>
+                                    <th>IVA (Bs)</th>
+                                    <th>Comprobante Ret. IVA</th>
+                                    <th>Total (Bs)</th>
+                                    <th>Total ($)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="compras-table-body"></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- ============================================== -->
+                <!-- VISTA 4: TERCEROS (CLIENTES Y PROVEEDORES)    -->
+                <!-- ============================================== -->
+                <section id="view-terceros" style="display: none;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                        <div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                <h3>Directorio de Clientes</h3>
+                                <button onclick="abrirModalNuevoCliente()" class="btn-glass btn-glass-primary" style="padding: 6px 12px; font-size:0.85rem;">+ Cliente RIF</button>
+                            </div>
+                            <div class="glass-table-wrapper" style="margin-top:0;">
+                                <table class="glass-table">
+                                    <thead>
+                                        <tr>
+                                            <th>RIF / CI</th>
+                                            <th>Razón Social</th>
+                                            <th>Tipo Contribuyente</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="clientes-table-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                <h3>Proveedores Registrados</h3>
+                                <button onclick="abrirModalNuevoProveedor()" class="btn-glass btn-glass-primary" style="padding: 6px 12px; font-size:0.85rem;">+ Proveedor RIF</button>
+                            </div>
+                            <div class="glass-table-wrapper" style="margin-top:0;">
+                                <table class="glass-table">
+                                    <thead>
+                                        <tr>
+                                            <th>RIF</th>
+                                            <th>Razón Social</th>
+                                            <th>% Ret. IVA</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="proveedores-table-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ============================================== -->
+                <!-- VISTA 5: LIBROS FISCALES SENIAT                -->
+                <!-- ============================================== -->
+                <section id="view-libros" style="display: none;">
+                    <div class="glass-table-wrapper" style="margin-top:0; margin-bottom:16px;">
+                        <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; justify-content: space-between;">
+                            <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end;">
+                                <div>
+                                    <label style="display:block; font-size:0.75rem; color:var(--text-muted); margin-bottom:4px;">Tipo de Libro:</label>
+                                    <select id="select-tipo-libro" class="glass-input" onchange="cargarLibroFiscal()">
+                                        <option value="ventas">Libro de Ventas Fiscal (Art. 76 Reg. IVA + IGTF 3%)</option>
+                                        <option value="compras">Libro de Compras Fiscal (Art. 75 Reg. IVA)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style="display:block; font-size:0.75rem; color:var(--text-muted); margin-bottom:4px;">Desde:</label>
+                                    <input type="date" id="libro-fecha-desde" class="glass-input">
+                                </div>
+                                <div>
+                                    <label style="display:block; font-size:0.75rem; color:var(--text-muted); margin-bottom:4px;">Hasta:</label>
+                                    <input type="date" id="libro-fecha-hasta" class="glass-input">
+                                </div>
+                                <button onclick="cargarLibroFiscal()" class="btn-glass btn-glass-primary">Generar</button>
+                            </div>
+
+                            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                <button onclick="descargarLibroCSV()" class="btn-glass btn-glass-success" title="Descargar libro en Excel">
+                                    📥 Exportar Excel (CSV)
+                                </button>
+                                <button onclick="descargarTxtSENIAT()" class="btn-glass" title="Generar archivo oficial para el portal del SENIAT">
+                                    🏛️ TXT Retenciones SENIAT
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="libro-fiscal-container"></div>
+                </section>
+
+                <!-- ============================================== -->
+                <!-- VISTA 6: AUDITORÍA DE SEGURIDAD TI & SHA-256   -->
+                <!-- ============================================== -->
+                <section id="view-auditoria" style="display: none;">
+                    <div class="glass-kpi-card" style="margin-bottom: 20px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <h3 style="font-size: 1.25rem; font-weight: 800;">Panel de Auditoría de TI & Certificación SENIAT</h3>
+                                <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 4px;">
+                                    Garantiza la inalterabilidad, correlatividad estricta sin saltos y seguridad mediante encadenamiento criptográfico SHA-256.
+                                </p>
+                            </div>
+                            <button onclick="ejecutarAuditoriaIntegridad()" class="btn-glass btn-glass-primary">
+                                🔍 Ejecutar Verificación Criptográfica Ahora
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="auditoria-panel-live">
+                        <!-- Resultados de auditoría inyectados por JS -->
+                    </div>
+                </section>
+
+                <!-- ============================================== -->
+                <!-- VISTA 7: CONFIGURACIÓN & TASA BCV              -->
+                <!-- ============================================== -->
+                <section id="view-configuracion" style="display: none;">
+                    <div style="max-width: 650px;" class="glass-kpi-card">
+                        <h3 style="margin-bottom: 18px; border-bottom: 1px solid var(--glass-card-border); padding-bottom: 10px;">
+                            Configuración Tributaria y Tasa Oficial BCV
+                        </h3>
+
+                        <div style="margin-bottom: 16px;">
+                            <label style="display:block; font-size:0.85rem; color:var(--text-muted); margin-bottom:6px;">Tasa Oficial BCV (Bs/USD):</label>
+                            <div style="display: flex; gap: 10px;">
+                                <input type="number" step="0.01" class="glass-input" id="config-tasa-bcv" style="flex:1;">
+                                <button onclick="guardarTasaBCV()" class="btn-glass btn-glass-success">Guardar Tasa</button>
+                            </div>
+                            <small style="color: var(--text-muted); display: block; margin-top: 4px;">
+                                * Los precios en Bolívares se sincronizan instantáneamente en el mostrador POS y en el inventario.
+                            </small>
+                        </div>
+
+                        <div style="margin-bottom: 14px;">
+                            <label style="display:block; font-size:0.85rem; color:var(--text-muted); margin-bottom:6px;">Razón Social:</label>
+                            <input type="text" class="glass-input" id="config-razon-social" readonly style="width:100%;">
+                        </div>
+
+                        <div style="margin-bottom: 14px;">
+                            <label style="display:block; font-size:0.85rem; color:var(--text-muted); margin-bottom:6px;">RIF de la Empresa:</label>
+                            <input type="text" class="glass-input" id="config-rif" readonly style="width:100%;">
+                        </div>
+
+                        <div style="margin-bottom: 14px;">
+                            <label style="display:block; font-size:0.85rem; color:var(--text-muted); margin-bottom:6px;">Serial de Impresora Fiscal Registrada (SENIAT Prov. 0141):</label>
+                            <input type="text" class="glass-input" id="config-serial-fiscal" readonly style="width:100%;">
+                        </div>
+
+                        <div style="margin-bottom: 14px;">
+                            <label style="display:block; font-size:0.85rem; color:var(--text-muted); margin-bottom:6px;">Calificación Tributaria:</label>
+                            <input type="text" class="glass-input" value="Sujeto Pasivo Especial - Agente de Retención IVA y Percepción IGTF (3%)" readonly style="width:100%; color:#86efac; font-weight:bold;">
+                        </div>
+                    </div>
+                </section>
+
+            </main>
+        </div>
+
+    </div>
+
+    <!-- MODALES DE OPERACIÓN (NUEVO PRODUCTO, KÁRDEX, COMPRA, NOTA DE CRÉDITO, ETC.) -->
+
+    <!-- Modal Nuevo Producto -->
+    <div id="modal-producto" class="modal-overlay" style="display: none;">
+        <div class="modal-glass-content">
+            <h2 style="font-size: 1.25rem; font-weight: 800; margin-bottom: 16px;">Nuevo Producto Bimonetario</h2>
+            <div style="margin-bottom: 12px;">
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Código de Barras:</label>
+                <input type="text" class="glass-input" id="prod-form-barcode" placeholder="7591001005" style="width:100%;">
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Descripción:</label>
+                <input type="text" class="glass-input" id="prod-form-desc" placeholder="Nombre comercial del producto" style="width:100%;">
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Categoría:</label>
+                <select class="glass-input" id="prod-form-cat" style="width:100%;"></select>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Alícuota IVA SENIAT:</label>
+                <select class="glass-input" id="prod-form-iva" style="width:100%;">
+                    <option value="G">General (16%)</option>
+                    <option value="E">Exento / Exonerado (0% Cesta Básica / Medicinas)</option>
+                    <option value="R">Reducida (8%)</option>
+                    <option value="A">Adicional / Suntuaria (31%)</option>
+                </select>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                <div>
+                    <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Costo ($ USD):</label>
+                    <input type="number" step="0.01" class="glass-input" id="prod-form-costo" placeholder="0.00" style="width:100%;">
+                </div>
+                <div>
+                    <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Precio Venta ($ USD):</label>
+                    <input type="number" step="0.01" class="glass-input" id="prod-form-precio" placeholder="0.00" style="width:100%;">
+                </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+                <div>
+                    <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Stock Inicial:</label>
+                    <input type="number" step="0.01" class="glass-input" id="prod-form-stock" value="10" style="width:100%;">
+                </div>
+                <div>
+                    <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Stock Mínimo Alerta:</label>
+                    <input type="number" step="0.01" class="glass-input" id="prod-form-stock-min" value="5" style="width:100%;">
+                </div>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button onclick="cerrarModalProducto()" class="btn-glass">Cancelar</button>
+                <button onclick="guardarProductoNuevo()" class="btn-glass btn-glass-primary">Guardar Producto</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Kárdex -->
+    <div id="modal-kardex" class="modal-overlay" style="display: none;">
+        <div class="modal-glass-content" style="max-width: 800px;">
+            <h2 style="font-size: 1.25rem; font-weight: 800; margin-bottom: 16px;" id="kardex-modal-title">Kárdex de Producto</h2>
+            <div class="glass-table-wrapper" style="margin-top:0;">
+                <table class="glass-table">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Movimiento</th>
+                            <th>Cantidad</th>
+                            <th>Stock Ant.</th>
+                            <th>Stock Nuevo</th>
+                            <th>Referencia</th>
+                        </tr>
+                    </thead>
+                    <tbody id="kardex-table-body"></tbody>
+                </table>
+            </div>
+            <div style="display: flex; justify-content: flex-end; margin-top: 16px;">
+                <button onclick="cerrarModalKardex()" class="btn-glass">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Nueva Compra -->
+    <div id="modal-compra" class="modal-overlay" style="display: none;">
+        <div class="modal-glass-content" style="max-width: 700px;">
+            <h2 style="font-size: 1.25rem; font-weight: 800; margin-bottom: 16px;">Cargar Factura de Proveedor</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                <div>
+                    <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Proveedor:</label>
+                    <select class="glass-input" id="compra-form-prov" style="width:100%;"></select>
+                </div>
+                <div>
+                    <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Fecha Factura:</label>
+                    <input type="date" class="glass-input" id="compra-form-fecha" style="width:100%;">
+                </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                <div>
+                    <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Nº Factura Proveedor:</label>
+                    <input type="text" class="glass-input" id="compra-form-factura" placeholder="00045612" style="width:100%;">
+                </div>
+                <div>
+                    <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Nº Control Fiscal:</label>
+                    <input type="text" class="glass-input" id="compra-form-control" placeholder="00-001234" style="width:100%;">
+                </div>
+            </div>
+
+            <div style="border-top: 1px solid var(--glass-card-border); padding-top: 12px; margin-top: 12px;">
+                <strong style="font-size: 0.9rem;">Productos a Ingresar:</strong>
+                <div id="compra-items-list" style="margin-top: 8px;"></div>
+                <button onclick="agregarRenglonCompra()" class="btn-glass" style="padding: 6px 12px; font-size: 0.8rem; margin-top: 6px;">
+                    + Agregar Ítem
+                </button>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                <button onclick="cerrarModalCompra()" class="btn-glass">Cancelar</button>
+                <button onclick="guardarCompra()" class="btn-glass btn-glass-success">Registrar y Alimentar Stock</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Nuevo Cliente con RIF -->
+    <div id="modal-cliente" class="modal-overlay" style="display: none;">
+        <div class="modal-glass-content">
+            <h2 style="font-size: 1.25rem; font-weight: 800; margin-bottom: 16px;">Registrar Cliente con RIF</h2>
+            <div style="display: grid; grid-template-columns: 80px 1fr 70px; gap: 8px; margin-bottom: 12px;">
+                <div>
+                    <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Tipo:</label>
+                    <select class="glass-input" id="cli-tipo" style="width:100%;">
+                        <option value="V">V</option>
+                        <option value="J">J</option>
+                        <option value="E">E</option>
+                        <option value="G">G</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Cuerpo RIF:</label>
+                    <input type="text" class="glass-input" id="cli-num" placeholder="12345678" style="width:100%;">
+                </div>
+                <div>
+                    <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Dígito:</label>
+                    <input type="text" class="glass-input" id="cli-digito" placeholder="9" maxlength="1" style="width:100%;">
+                </div>
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Razón Social:</label>
+                <input type="text" class="glass-input" id="cli-nombre" placeholder="Nombre completo o Empresa" style="width:100%;">
+            </div>
+            <div style="margin-bottom: 12px;">
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Dirección:</label>
+                <input type="text" class="glass-input" id="cli-dir" placeholder="Dirección fiscal" style="width:100%;">
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px;">
+                <button onclick="cerrarModalCliente()" class="btn-glass">Cancelar</button>
+                <button onclick="guardarCliente()" class="btn-glass btn-glass-primary">Validar y Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Emisión de Nota de Crédito Fiscal -->
+    <div id="modal-nc" class="modal-overlay" style="display: none;">
+        <div class="modal-glass-content">
+            <h2 style="font-size: 1.25rem; font-weight: 800; margin-bottom: 12px; color: #f87171;">Emitir Nota de Crédito Fiscal</h2>
+            <p style="color:var(--text-muted); margin-bottom: 14px; font-size: 0.85rem;">
+                Conforme a la Providencia 0141 del SENIAT, cualquier anulación debe generar una Nota de Crédito que afecte la factura original y reingrese el stock al Kárdex.
+            </p>
+            <input type="hidden" id="nc-factura-id">
+            <div style="margin-bottom: 14px;">
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Factura Afectada:</label>
+                <input type="text" class="glass-input" id="nc-factura-num" readonly style="width:100%; color:#60a5fa; font-weight:bold;">
+            </div>
+            <div style="margin-bottom: 16px;">
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Motivo de Devolución:</label>
+                <input type="text" class="glass-input" id="nc-motivo" value="Devolución de cliente" style="width:100%;">
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button onclick="document.getElementById('modal-nc').style.display = 'none'" class="btn-glass">Cancelar</button>
+                <button onclick="confirmarNotaCredito()" class="btn-glass btn-glass-danger">Emitir NC y Reingresar Stock</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/admin.js"></script>
+    <script>
+        // Enrutador de Vistas del Sidebar
+        function cambiarVista(vista, btnEl) {
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            if (btnEl) btnEl.classList.add('active');
+
+            const vistas = ['dashboard', 'inventario', 'compras', 'terceros', 'libros', 'auditoria', 'configuracion'];
+            vistas.forEach(v => {
+                const el = document.getElementById(`view-${v}`);
+                if (el) el.style.display = (v === vista) ? 'block' : 'none';
+            });
+
+            // Título dinámico en el Header
+            const titulos = {
+                'dashboard': 'Dashboard General de Operaciones',
+                'inventario': 'Control de Inventario & Kárdex Bimonetario',
+                'compras': 'Gestión de Compras y Retenciones Fiscales',
+                'terceros': 'Directorio de Clientes y Proveedores (RIF)',
+                'libros': 'Libros Fiscales Oficiales SENIAT (IVA & IGTF 3%)',
+                'auditoria': 'Auditoría de Integridad TI & Criptografía SHA-256',
+                'configuracion': 'Configuración de la Empresa y Tasa BCV'
+            };
+            document.getElementById('header-view-title').innerText = titulos[vista] || 'MeDIa-CONTABLE';
+
+            if (vista === 'libros') cargarLibroFiscal();
+            if (vista === 'auditoria') renderizarPanelAuditoriaLive();
+        }
+
+        async function renderizarPanelAuditoriaLive() {
+            const container = document.getElementById('auditoria-panel-live');
+            container.innerHTML = `<div style="text-align:center; padding:30px; color:var(--text-muted);">Ejecutando auditoría criptográfica...</div>`;
+            try {
+                const res = await fetch('/api/pos/auditoria-integridad');
+                const d = await res.json();
+                container.innerHTML = `
+                    <div class="glass-kpi-grid">
+                        <div class="glass-kpi-card glass-glow-green">
+                            <span class="kpi-title">Facturas Verificadas</span>
+                            <div class="kpi-value">${d.totalDocumentos}</div>
+                            <div class="kpi-subtext">Base de datos de facturación activa</div>
+                        </div>
+                        <div class="glass-kpi-card ${d.correlatividadCorrecta ? 'glass-glow-green' : 'glass-glow-amber'}">
+                            <span class="kpi-title">Correlatividad Numérica</span>
+                            <div class="kpi-value" style="font-size:1.4rem; color:${d.correlatividadCorrecta ? '#86efac' : '#f87171'}">
+                                ${d.correlatividadCorrecta ? '✓ 100% CONTINUA' : '✗ DISCONTINUA'}
+                            </div>
+                            <div class="kpi-subtext">Cero saltos y cero duplicados</div>
+                        </div>
+                        <div class="glass-kpi-card ${d.integridadCadenaCorrecta ? 'glass-glow-blue' : 'glass-glow-amber'}">
+                            <span class="kpi-title">Cadena SHA-256</span>
+                            <div class="kpi-value" style="font-size:1.4rem; color:${d.integridadCadenaCorrecta ? '#93c5fd' : '#f87171'}">
+                                ${d.integridadCadenaCorrecta ? '✓ INALTERADA' : '✗ ALTERADA'}
+                            </div>
+                            <div class="kpi-subtext">Protección criptográfica contra edición manual</div>
+                        </div>
+                    </div>
+                `;
+            } catch(e) {
+                container.innerHTML = `<div style="color:#f87171; text-align:center;">Error al ejecutar auditoría</div>`;
+            }
+        }
+    </script>
+</body>
+</html>

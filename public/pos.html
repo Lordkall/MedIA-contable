@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MeDIa POS - Punto de Venta Fiscal</title>
+    <link rel="stylesheet" href="/css/app.css">
+    <style>
+        .pos-top-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .category-pills {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            margin-bottom: 12px;
+            padding-bottom: 4px;
+        }
+        .pill-btn {
+            background: #0f172a;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 6px 14px;
+            border-radius: 16px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .pill-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        .igtf-alert-box {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-radius: 8px;
+            padding: 10px 14px;
+            margin-top: 10px;
+            font-size: 0.85rem;
+            color: #fbbf24;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .payment-method-row {
+            background: #0f172a;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header POS -->
+    <header class="top-nav">
+        <div class="brand">
+            <a href="/" style="text-decoration: none;"><span class="brand-badge">MeDIa</span></a>
+            <div>
+                <strong style="font-size: 1.05rem;">PUNTO DE VENTA (POS)</strong>
+                <span class="brand-sub" id="caja-info-header">Caja 01 - Turno Activo</span>
+            </div>
+        </div>
+
+        <div class="top-indicators">
+            <div class="indicator-badge bcv">
+                <span>BCV:</span>
+                <strong id="pos-bcv-rate">Bs. --</strong>
+            </div>
+
+            <div class="pos-top-actions">
+                <button onclick="solicitarReporteX()" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.85rem;" title="Lectura X sin corte fiscal">
+                    Reporte X
+                </button>
+                <button onclick="solicitarReporteZ()" class="btn btn-warning" style="padding: 6px 12px; font-size: 0.85rem;" title="Cierre Z Diario Oficial SENIAT">
+                    Cierre Z
+                </button>
+                <button onclick="gestionarCajaModal()" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.85rem;">
+                    Caja
+                </button>
+                <a href="/admin.html" class="btn btn-primary" style="padding: 6px 12px; font-size: 0.85rem; text-decoration: none;">
+                    Administrativo →
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- POS Main Grid -->
+    <main class="main-container">
+        <div class="pos-grid">
+            
+            <!-- PANEL IZQUIERDO: Búsqueda y Catálogo -->
+            <section class="pos-catalog-panel">
+                <div class="search-box">
+                    <input 
+                        type="text" 
+                        id="barcode-input" 
+                        class="input-text" 
+                        placeholder="🔍 Escanee código de barras o escriba para buscar (Enter)..." 
+                        autofocus
+                    >
+                    <button onclick="buscarProductosManual()" class="btn btn-primary">Buscar</button>
+                </div>
+
+                <!-- Categorías -->
+                <div class="category-pills" id="category-pills-container">
+                    <button class="pill-btn active" onclick="filtrarCategoria(null, this)">Todos</button>
+                    <!-- Inyectadas dinámicamente -->
+                </div>
+
+                <!-- Grid de Productos -->
+                <div class="products-grid" id="pos-products-container">
+                    <!-- Cards inyectadas por JS -->
+                </div>
+            </section>
+
+            <!-- PANEL DERECHO: Carrito y Totales -->
+            <section class="pos-cart-panel">
+                <div class="cart-header">
+                    <div>
+                        <strong style="font-size: 1.1rem;">Ticket de Venta</strong>
+                        <div style="font-size: 0.8rem; color: var(--text-secondary);">Ítems: <span id="cart-items-count">0</span></div>
+                    </div>
+                    <div>
+                        <select id="cart-client-select" class="form-select" style="font-size: 0.85rem; padding: 6px 10px;">
+                            <option value="">CONSUMIDOR FINAL / CONTADO</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Lista de Ítems en Carrito -->
+                <div class="cart-items-wrapper" id="cart-items-list">
+                    <div style="text-align: center; color: var(--text-secondary); margin-top: 60px;">
+                        <span style="font-size: 2.5rem; display: block; margin-bottom: 10px;">🛒</span>
+                        Escanee o seleccione un producto para comenzar
+                    </div>
+                </div>
+
+                <!-- Resumen de Totales e Impuestos SENIAT -->
+                <div class="totals-summary">
+                    <div class="summary-row">
+                        <span>Subtotal Exento (E):</span>
+                        <strong id="tot-exento">Bs. 0,00</strong>
+                    </div>
+                    <div class="summary-row">
+                        <span>Base Imponible (G 16%):</span>
+                        <strong id="tot-base-g">Bs. 0,00</strong>
+                    </div>
+                    <div class="summary-row">
+                        <span>IVA General (16%):</span>
+                        <strong id="tot-iva-g">Bs. 0,00</strong>
+                    </div>
+                    <div class="summary-row total-usd">
+                        <span>Total Ref. en Divisas:</span>
+                        <strong id="tot-usd">$ 0.00</strong>
+                    </div>
+                    <div class="summary-row total-ves">
+                        <span>TOTAL BS:</span>
+                        <strong id="tot-ves">Bs. 0,00</strong>
+                    </div>
+                </div>
+
+                <!-- Acciones del Carrito -->
+                <div class="pos-actions">
+                    <button onclick="limpiarCarrito()" class="btn btn-secondary">
+                        Cancelar Venta
+                    </button>
+                    <button onclick="abrirModalCobro()" class="btn btn-success btn-checkout" id="btn-cobrar" disabled>
+                        COBRAR FACTURA [F12] →
+                    </button>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- MODAL DE COBRO MULTIMONEDA E IGTF (3%) -->
+    <div id="modal-cobro" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <h2 class="modal-title">Cobro Multimoneda & Fiscal (SENIAT)</h2>
+            
+            <div style="background: #0f172a; border-radius: 8px; padding: 14px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <div style="font-size: 0.85rem; color: var(--text-secondary);">Total Factura:</div>
+                    <div id="modal-cobro-total-ves" style="font-size: 1.4rem; font-weight: 800; color: #86efac;">Bs. 0,00</div>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-size: 0.85rem; color: var(--text-secondary);">Equivalente USD:</div>
+                    <div id="modal-cobro-total-usd" style="font-size: 1.2rem; font-weight: 700; color: #93c5fd;">$ 0.00</div>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 14px;">
+                <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 8px; color: var(--text-secondary);">
+                    DISTRIBUCIÓN DE MEDIOS DE PAGO:
+                </div>
+
+                <!-- Bolívares: Punto Débito -->
+                <div class="payment-method-row">
+                    <div>
+                        <strong style="display: block;">💳 Punto de Débito (Bs.)</strong>
+                        <small style="color: var(--text-secondary);">Sin IGTF</small>
+                    </div>
+                    <input type="number" step="0.01" min="0" class="input-text" id="pago-debito-ves" placeholder="0.00" style="max-width: 150px; text-align: right;" oninput="recalcularModalPagos()">
+                </div>
+
+                <!-- Bolívares: Pago Móvil / Biopago -->
+                <div class="payment-method-row">
+                    <div>
+                        <strong style="display: block;">📱 Pago Móvil / Biopago (Bs.)</strong>
+                        <small style="color: var(--text-secondary);">Sin IGTF</small>
+                    </div>
+                    <input type="number" step="0.01" min="0" class="input-text" id="pago-movil-ves" placeholder="0.00" style="max-width: 150px; text-align: right;" oninput="recalcularModalPagos()">
+                </div>
+
+                <!-- Bolívares: Efectivo Bs. -->
+                <div class="payment-method-row">
+                    <div>
+                        <strong style="display: block;">💵 Efectivo Bolívares</strong>
+                        <small style="color: var(--text-secondary);">Sin IGTF</small>
+                    </div>
+                    <input type="number" step="0.01" min="0" class="input-text" id="pago-efectivo-ves" placeholder="0.00" style="max-width: 150px; text-align: right;" oninput="recalcularModalPagos()">
+                </div>
+
+                <!-- Divisas: Efectivo USD -->
+                <div class="payment-method-row" style="border-color: #f59e0b;">
+                    <div>
+                        <strong style="display: block; color: #f59e0b;">💵 Efectivo Divisas ($)</strong>
+                        <small style="color: #fbbf24;">Aplica 3% IGTF (Prov. 000013)</small>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span>$</span>
+                        <input type="number" step="0.01" min="0" class="input-text" id="pago-efectivo-usd" placeholder="0.00" style="max-width: 130px; text-align: right;" oninput="recalcularModalPagos()">
+                    </div>
+                </div>
+
+                <!-- Divisas: Zelle / Transferencia Internacional -->
+                <div class="payment-method-row" style="border-color: #f59e0b;">
+                    <div>
+                        <strong style="display: block; color: #f59e0b;">🏦 Zelle / Cripto ($)</strong>
+                        <small style="color: #fbbf24;">Aplica 3% IGTF (Prov. 000013)</small>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span>$</span>
+                        <input type="number" step="0.01" min="0" class="input-text" id="pago-zelle-usd" placeholder="0.00" style="max-width: 130px; text-align: right;" oninput="recalcularModalPagos()">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alerta e Importe de IGTF 3% -->
+            <div id="igtf-display-box" class="igtf-alert-box" style="display: none;">
+                <div>
+                    <strong>Percepción IGTF (3% Divisas):</strong>
+                    <div style="font-size: 0.75rem;">Base en Divisas: <span id="igtf-base-usd">$ 0.00</span></div>
+                </div>
+                <strong id="igtf-monto-ves" style="font-size: 1.1rem;">+ Bs. 0,00</strong>
+            </div>
+
+            <!-- Resumen de Pago / Saldo Restante -->
+            <div style="background: #0f172a; border-radius: 8px; padding: 14px; margin-top: 14px;">
+                <div class="summary-row">
+                    <span>Total a Pagar (con IGTF):</span>
+                    <strong id="modal-total-exigido-ves">Bs. 0,00</strong>
+                </div>
+                <div class="summary-row">
+                    <span>Monto Ingresado:</span>
+                    <strong id="modal-total-ingresado-ves">Bs. 0,00</strong>
+                </div>
+                <div class="summary-row" style="font-size: 1.15rem; margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--border-color);">
+                    <span id="modal-estado-pago-label">Saldo Pendiente:</span>
+                    <strong id="modal-saldo-diferencia" style="color: #f87171;">Bs. 0,00</strong>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                <button onclick="cerrarModalCobro()" class="btn btn-secondary">Cancelar</button>
+                <button onclick="confirmarVentaFiscal()" class="btn btn-success" id="btn-confirmar-fiscal" disabled style="padding: 12px 24px;">
+                    🖨️ EMITIR FACTURA FISCAL
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE VISUALIZACIÓN DE TICKET FISCAL SENIAT -->
+    <div id="modal-ticket-fiscal" class="modal-overlay" style="display: none;">
+        <div class="modal-content" style="max-width: 520px;">
+            <h2 class="modal-title">Comprobante Fiscal Emitido</h2>
+            <div style="text-align: center; color: #86efac; margin-bottom: 12px; font-weight: 600;">
+                ✓ Impreso en Memoria Fiscal y Descontado de Inventario
+            </div>
+            
+            <div class="ticket-preview" id="ticket-preview-content"></div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button onclick="copiarTicketTexto()" class="btn btn-secondary">Copiar Texto</button>
+                <button onclick="cerrarModalTicket()" class="btn btn-primary">Aceptar y Nueva Venta</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE CAJA (APERTURA / ARQUEO / CIERRE) -->
+    <div id="modal-caja" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <h2 class="modal-title" id="modal-caja-titulo">Gestión de Caja</h2>
+            <div id="modal-caja-body"></div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                <button onclick="cerrarModalCaja()" class="btn btn-secondary">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/pos.js"></script>
+</body>
+</html>
+

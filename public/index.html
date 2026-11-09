@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MeDIa - Suite Administrativa Básica + Punto de Venta (SENIAT / BCV)</title>
+    <link rel="stylesheet" href="/css/app.css">
+    <style>
+        .hub-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 24px;
+            margin-top: 30px;
+        }
+        .hub-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 32px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+            text-decoration: none;
+            color: inherit;
+        }
+        .hub-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--primary);
+            box-shadow: 0 12px 24px -10px rgba(37, 99, 235, 0.3);
+        }
+        .hub-card-icon {
+            font-size: 3rem;
+            margin-bottom: 16px;
+        }
+        .hub-card-title {
+            font-size: 1.6rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+        .hub-card-desc {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.5;
+            margin-bottom: 24px;
+        }
+        .badge-seniat {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(37, 99, 235, 0.15);
+            color: #60a5fa;
+            border: 1px solid rgba(37, 99, 235, 0.3);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+        .status-strip {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-top: 30px;
+        }
+        .status-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .status-box-val {
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: #86efac;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top Bar -->
+    <header class="top-nav">
+        <div class="brand">
+            <span class="brand-badge">MeDIa</span>
+            <div>
+                <strong style="display:block; font-size:1.05rem;">MeDIa-CONTABLE</strong>
+                <span class="brand-sub">Sistema Administrativo Básico + Punto de Venta</span>
+            </div>
+        </div>
+        <div class="top-indicators">
+            <div class="indicator-badge bcv">
+                <span>BCV Oficial:</span>
+                <strong id="top-bcv-rate">Cargando...</strong>
+            </div>
+            <div id="caja-status-pill" class="indicator-badge status-open">
+                <span>Caja:</span>
+                <strong id="caja-status-text">Verificando...</strong>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-container">
+        <div style="max-width: 1000px; margin: 20px auto 0 auto; width: 100%;">
+            
+            <div style="text-align: center; margin-bottom: 30px;">
+                <span class="badge-seniat">🇻🇪 ADAPTADO A NORMATIVAS SENIAT & BCV</span>
+                <h1 style="font-size: 2.4rem; font-weight: 800; margin-top: 6px;">Bienvenido a MeDIa</h1>
+                <p style="color: var(--text-secondary); font-size: 1.1rem; max-width: 650px; margin: 10px auto 0 auto;">
+                    Gestión comercial y fiscal unificada para comercios venezolanos. Agiliza tus ventas en mostrador y centraliza tu inventario y compras con respaldo legal total.
+                </p>
+            </div>
+
+            <!-- Accesos a Módulos -->
+            <div class="hub-cards">
+                <!-- Tarjeta POS -->
+                <a href="/pos.html" class="hub-card">
+                    <div>
+                        <div class="hub-card-icon">⚡🛒</div>
+                        <div class="hub-card-title" style="color: #60a5fa;">MeDIa POS (Punto de Venta)</div>
+                        <p class="hub-card-desc">
+                            Operación rápida en mostrador con lector de barras o táctil. Cobros mixtos en Bolívares y Divisas, cálculo automático del <strong>3% de IGTF (Prov. 000013)</strong>, impresión fiscal y cierres X / Z diarios.
+                        </p>
+                    </div>
+                    <button class="btn btn-primary" style="width: 100%; padding: 14px; font-size: 1.05rem;">
+                        Abrir Punto de Venta →
+                    </button>
+                </a>
+
+                <!-- Tarjeta Administrativo -->
+                <a href="/admin.html" class="hub-card">
+                    <div>
+                        <div class="hub-card-icon">🏢📊</div>
+                        <div class="hub-card-title" style="color: #4ade80;">MeDIa Administrativo</div>
+                        <p class="hub-card-desc">
+                            Control de inventario con Kárdex en tiempo real, costeo en divisas y bolívares, recepción de compras de proveedores, emisión de retenciones de IVA (75%/100%) y generación de <strong>Libros Fiscales SENIAT</strong>.
+                        </p>
+                    </div>
+                    <button class="btn btn-success" style="width: 100%; padding: 14px; font-size: 1.05rem;">
+                        Panel Administrativo →
+                    </button>
+                </a>
+            </div>
+
+            <!-- Resumen Rápido de Estado -->
+            <div class="status-strip">
+                <div class="status-box">
+                    <div>
+                        <div style="font-size:0.85rem; color:var(--text-secondary);">Tasa BCV Activa</div>
+                        <div id="stat-bcv" class="status-box-val">Bs. --</div>
+                    </div>
+                    <button onclick="cambiarTasaPrompt()" class="btn btn-secondary" style="padding: 6px 10px; font-size:0.8rem;">
+                        Actualizar
+                    </button>
+                </div>
+
+                <div class="status-box">
+                    <div>
+                        <div style="font-size:0.85rem; color:var(--text-secondary);">Productos en Catálogo</div>
+                        <div id="stat-prods" class="status-box-val">--</div>
+                    </div>
+                    <span style="font-size: 1.6rem;">📦</span>
+                </div>
+
+                <div class="status-box">
+                    <div>
+                        <div style="font-size:0.85rem; color:var(--text-secondary);">Ventas de Hoy</div>
+                        <div id="stat-ventas-hoy" class="status-box-val">Bs. 0,00</div>
+                    </div>
+                    <span style="font-size: 1.6rem;">🧾</span>
+                </div>
+
+                <div class="status-box">
+                    <div>
+                        <div style="font-size:0.85rem; color:var(--text-secondary);">Fiscal SENIAT</div>
+                        <div style="font-size:0.95rem; font-weight:700; color:#38bdf8;">PROV. 0141 / 00013</div>
+                    </div>
+                    <span style="font-size: 1.6rem;">🏛️</span>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <footer style="text-align: center; padding: 20px; color: var(--text-secondary); font-size: 0.85rem; border-top: 1px solid var(--border-color);">
+        MeDIa &copy; 2026 - Desarrollado bajo las leyes y normativas tributarias de la República Bolivariana de Venezuela.
+    </footer>
+
+    <script>
+        async function cargarEstadoHub() {
+            try {
+                // Tasa BCV
+                const resBcv = await fetch('/api/bcv/tasa');
+                const dataBcv = await resBcv.json();
+                document.getElementById('top-bcv-rate').innerText = `Bs. ${dataBcv.tasa.toFixed(2)}`;
+                document.getElementById('stat-bcv').innerText = `Bs. ${dataBcv.tasa.toFixed(2)}`;
+
+                // Sesión de Caja
+                const resCaja = await fetch('/api/pos/sesion');
+                const sesion = await resCaja.json();
+                const pill = document.getElementById('caja-status-pill');
+                const txt = document.getElementById('caja-status-text');
+                if (sesion && sesion.estado === 'ABIERTA') {
+                    pill.className = 'indicator-badge status-open';
+                    txt.innerText = `Caja ${sesion.numero_caja} (Abierta)`;
+                } else {
+                    pill.className = 'indicator-badge status-closed';
+                    txt.innerText = 'Cerrada';
+                }
+
+                // Resumen Gerencial
+                const resGer = await fetch('/api/reportes/gerencial');
+                const ger = await resGer.json();
+                document.getElementById('stat-prods').innerText = ger.inventario.total_items;
+                document.getElementById('stat-ventas-hoy').innerText = `Bs. ${ger.ventas.total_ves.toLocaleString('es-VE', {minimumFractionDigits:2})}`;
+            } catch (err) {
+                console.error("Error al cargar estado del sistema", err);
+            }
+        }
+
+        async function cambiarTasaPrompt() {
+            const actual = document.getElementById('stat-bcv').innerText.replace('Bs. ', '');
+            const nueva = prompt("Ingrese la nueva tasa oficial del BCV (Bs/USD):", actual);
+            if (!nueva) return;
+            const tasaNum = parseFloat(nueva);
+            if (isNaN(tasaNum) || tasaNum <= 0) {
+                alert("Por favor ingrese un número válido.");
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/bcv/tasa', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tasa: tasaNum })
+                });
+                if (res.ok) {
+                    alert("Tasa oficial del BCV actualizada en todo el sistema MeDIa.");
+                    cargarEstadoHub();
+                } else {
+                    alert("Error al guardar la tasa.");
+                }
+            } catch (err) {
+                alert("Error de conexión con el servidor.");
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', cargarEstadoHub);
+    </script>
+</body>
+</html>
+

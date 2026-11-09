@@ -1,0 +1,23 @@
+{
+  "name": "media-contable",
+  "version": "1.0.0",
+  "description": "MeDIa - Suite Administrativa Básica + Punto de Venta adaptada al SENIAT y BCV",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "seed": "node -e \"require('./src/database/seed')()\""
+  },
+  "keywords": [
+    "pos",
+    "seniat",
+    "venezuela",
+    "igtf",
+    "bcv",
+    "administrativo",
+    "kardex",
+    "punto-de-venta"
+  ],
+  "author": "MeDIa Software Solutions Venezuela",
+  "license": "Proprietary",
+  "type": "commonjs"
+}
