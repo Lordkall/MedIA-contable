@@ -168,25 +168,34 @@ function buscarProductosManual() {
 function renderizarCatalogo() {
     const container = document.getElementById('pos-products-container');
     if (!state.catalogo || state.catalogo.length === 0) {
-        container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--text-secondary); padding: 40px;">No se encontraron productos coincidentes</div>`;
+        container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 40px;">No se encontraron productos coincidentes</div>`;
         return;
     }
 
-    container.innerHTML = state.catalogo.map(prod => `
-        <div class="product-card" onclick="agregarAlCarritoPorId(${prod.id})">
-            <div>
-                <span class="prod-tag tag-${prod.alicuota_iva}">${getNombreAlicuota(prod.alicuota_iva)}</span>
-                <div class="prod-desc">${prod.descripcion}</div>
-            </div>
-            <div>
-                <div class="prod-prices">
-                    <span class="price-ves">Bs. ${prod.precio_ves.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
-                    <span class="price-usd">$ ${prod.precio_usd.toFixed(2)}</span>
+    container.innerHTML = state.catalogo.map(prod => {
+        const stockAlerta = prod.stock_actual <= prod.stock_minimo ? 'color:#f87171;' : 'color:#86efac;';
+        return `
+            <div class="product-card" onclick="agregarAlCarritoPorId(${prod.id})">
+                <div>
+                    <div class="prod-header">
+                        <span class="prod-tag tag-${prod.alicuota_iva}">${getNombreAlicuota(prod.alicuota_iva)}</span>
+                        <code style="font-size:0.7rem; color:var(--text-muted);">${prod.codigo_barra}</code>
+                    </div>
+                    <div class="prod-desc" title="${prod.descripcion}">${prod.descripcion}</div>
                 </div>
-                <div class="prod-stock">Stock disp: <strong>${prod.stock_actual}</strong> ${prod.unidad_medida}</div>
+                <div>
+                    <div class="prod-prices">
+                        <span class="price-ves">Bs. ${prod.precio_ves.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+                        <span class="price-usd">$ ${prod.precio_usd.toFixed(2)}</span>
+                    </div>
+                    <div class="prod-footer">
+                        <span class="prod-stock">Stock: <strong style="${stockAlerta}">${prod.stock_actual}</strong> ${prod.unidad_medida}</span>
+                        <span style="font-size: 0.72rem; color: #60a5fa; font-weight:700;">+ Agregar</span>
+                    </div>
+                </div>
             </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 function getNombreAlicuota(alic) {
@@ -195,6 +204,26 @@ function getNombreAlicuota(alic) {
     if (alic === 'A') return 'LUJO 31%';
     if (alic === 'R') return 'RED 8%';
     return alic;
+}
+
+// ==========================================
+// TOAST NOTIFICATIONS MODERNAS FLOTANTES
+// ==========================================
+function mostrarToast(mensaje, tipo = 'info') {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+    const toast = document.createElement('div');
+    toast.className = `glass-toast toast-${tipo}`;
+    toast.innerHTML = `
+        <span style="font-size:1.1rem;">${tipo === 'success' ? '✓' : tipo === 'error' ? '✕' : 'ℹ'}</span>
+        <span>${mensaje}</span>
+    `;
+    container.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(40px)';
+        setTimeout(() => toast.remove(), 300);
+    }, 3200);
 }
 
 // ==========================================
@@ -207,7 +236,6 @@ function procesarEscaneoBarcode(codigo) {
         agregarAlCarrito(encontrado);
         document.getElementById('barcode-input').value = '';
     } else {
-        // Intentar buscar directamente en API si no estaba cargado
         fetch(`/api/inventario/producto/${encodeURIComponent(codigo)}`)
             .then(res => res.json())
             .then(prod => {
@@ -215,10 +243,10 @@ function procesarEscaneoBarcode(codigo) {
                     agregarAlCarrito(prod);
                     document.getElementById('barcode-input').value = '';
                 } else {
-                    alert(`Código de barras "${codigo}" no encontrado en el catálogo.`);
+                    mostrarToast(`Código "${codigo}" no encontrado en catálogo.`, 'error');
                 }
             })
-            .catch(() => alert(`Código de barras "${codigo}" no encontrado.`));
+            .catch(() => mostrarToast(`Error al consultar código "${codigo}".`, 'error'));
     }
 }
 
@@ -229,14 +257,14 @@ function agregarAlCarritoPorId(id) {
 
 function agregarAlCarrito(prod) {
     if (prod.stock_actual <= 0) {
-        alert(`No hay stock disponible para "${prod.descripcion}".`);
+        mostrarToast(`Sin existencia disponible para "${prod.descripcion}".`, 'error');
         return;
     }
 
     const itemEnCarrito = state.carrito.find(it => it.producto_id === prod.id);
     if (itemEnCarrito) {
         if (itemEnCarrito.cantidad + 1 > prod.stock_actual) {
-            alert(`Stock máximo alcanzado para este ítem (${prod.stock_actual} disp).`);
+            mostrarToast(`Existencia máxima alcanzada (${prod.stock_actual} disp).`, 'error');
             return;
         }
         itemEnCarrito.cantidad += 1;
@@ -254,6 +282,7 @@ function agregarAlCarrito(prod) {
     }
 
     actualizarCarritoUI();
+    mostrarToast(`+ ${prod.descripcion}`, 'info');
 }
 
 function cambiarCantidad(prodId, delta) {
@@ -264,7 +293,7 @@ function cambiarCantidad(prodId, delta) {
     if (nuevaCant <= 0) {
         state.carrito = state.carrito.filter(it => it.producto_id !== prodId);
     } else if (nuevaCant > item.stock_max) {
-        alert(`Stock máximo alcanzado (${item.stock_max} disponibles).`);
+        mostrarToast(`Stock máximo disponible alcanzado (${item.stock_max}).`, 'error');
     } else {
         item.cantidad = nuevaCant;
     }
@@ -278,10 +307,9 @@ function eliminarDelCarrito(prodId) {
 
 function limpiarCarrito() {
     if (state.carrito.length === 0) return;
-    if (confirm("¿Desea cancelar y vaciar el ticket actual?")) {
-        state.carrito = [];
-        actualizarCarritoUI();
-    }
+    state.carrito = [];
+    actualizarCarritoUI();
+    mostrarToast("Ticket cancelado y vaciado.", 'info');
 }
 
 function actualizarCarritoUI() {
@@ -291,9 +319,9 @@ function actualizarCarritoUI() {
 
     if (state.carrito.length === 0) {
         listContainer.innerHTML = `
-            <div style="text-align: center; color: var(--text-secondary); margin-top: 60px;">
-                <span style="font-size: 2.5rem; display: block; margin-bottom: 10px;">🛒</span>
-                Escanee o seleccione un producto para comenzar
+            <div style="text-align: center; color: var(--text-muted); margin-top: 60px;">
+                <svg style="width:42px; height:42px; stroke:var(--text-muted); stroke-width:1.5; fill:none; margin: 0 auto 12px; display:block;" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+                <span>Escanee o haga clic en un producto para comenzar</span>
             </div>
         `;
         itemsCountEl.innerText = '0';
@@ -310,20 +338,22 @@ function actualizarCarritoUI() {
         const totalItemVes = it.cantidad * it.precio_ves;
         return `
             <div class="cart-item">
-                <div class="cart-item-info">
+                <div class="cart-item-row-top">
                     <div class="cart-item-title">${it.descripcion}</div>
-                    <div class="cart-item-sub">
-                        Bs. ${it.precio_ves.toFixed(2)} ($ ${it.precio_usd.toFixed(2)}) • <span class="prod-tag tag-${it.alicuota_iva}">${it.alicuota_iva}</span>
+                    <button onclick="eliminarDelCarrito(${it.producto_id})" style="background:none; border:none; color:#f87171; cursor:pointer; padding:2px;" title="Quitar ítem">
+                        <svg style="width:14px; height:14px; stroke:#f87171; stroke-width:2; fill:none;" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    </button>
+                </div>
+                <div class="cart-item-row-bottom">
+                    <div class="cart-item-qty">
+                        <button class="qty-btn" onclick="cambiarCantidad(${it.producto_id}, -1)">-</button>
+                        <span style="font-weight: 800; min-width: 22px; text-align: center; font-size: 0.88rem;">${it.cantidad}</span>
+                        <button class="qty-btn" onclick="cambiarCantidad(${it.producto_id}, 1)">+</button>
                     </div>
-                </div>
-                <div class="cart-item-qty">
-                    <button class="qty-btn" onclick="cambiarCantidad(${it.producto_id}, -1)">-</button>
-                    <span style="font-weight: 700; min-width: 20px; text-align: center;">${it.cantidad}</span>
-                    <button class="qty-btn" onclick="cambiarCantidad(${it.producto_id}, 1)">+</button>
-                </div>
-                <div class="cart-item-total">
-                    <div>Bs. ${totalItemVes.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}</div>
-                    <button onclick="eliminarDelCarrito(${it.producto_id})" style="background:none; border:none; color:#f87171; cursor:pointer; font-size:0.75rem;">Quitar</button>
+                    <div class="cart-item-price">
+                        <div class="cart-item-price-ves">Bs. ${totalItemVes.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}</div>
+                        <div class="cart-item-price-sub">$ ${(it.cantidad * it.precio_usd).toFixed(2)}</div>
+                    </div>
                 </div>
             </div>
         `;
@@ -574,41 +604,41 @@ function gestionarCajaModal() {
     if (state.sesionCaja && state.sesionCaja.estado === 'ABIERTA') {
         titulo.innerText = `Cierre y Arqueo - Caja ${state.sesionCaja.numero_caja}`;
         modalBody.innerHTML = `
-            <p style="color:var(--text-secondary); margin-bottom: 14px;">
-                Cajero activo: <strong>${state.sesionCaja.cajero}</strong> | Abierta: ${state.sesionCaja.fecha_apertura}
+            <p style="color:var(--text-muted); margin-bottom: 14px; font-size:0.85rem;">
+                Cajero activo: <strong style="color:white;">${state.sesionCaja.cajero}</strong> | Apertura: ${state.sesionCaja.fecha_apertura}
             </p>
-            <div class="form-group">
-                <label class="form-label">Conteo Físico en Bolívares (Efectivo Bs.):</label>
-                <input type="number" step="0.01" class="input-text" id="cierre-conteo-ves" placeholder="0.00">
+            <div style="margin-bottom: 12px;">
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Conteo Físico en Bolívares (Efectivo Bs.):</label>
+                <input type="number" step="0.01" class="glass-input" id="cierre-conteo-ves" placeholder="0.00" style="width:100%;">
             </div>
-            <div class="form-group">
-                <label class="form-label">Conteo Físico en Divisas (Efectivo USD $):</label>
-                <input type="number" step="0.01" class="input-text" id="cierre-conteo-usd" placeholder="0.00">
+            <div style="margin-bottom: 14px;">
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Conteo Físico en Divisas (Efectivo USD $):</label>
+                <input type="number" step="0.01" class="glass-input" id="cierre-conteo-usd" placeholder="0.00" style="width:100%;">
             </div>
-            <button onclick="ejecutarCierreCaja()" class="btn btn-danger" style="width: 100%; padding: 12px; margin-top: 10px;">
+            <button onclick="ejecutarCierreCaja()" class="btn-glass btn-glass-danger" style="width: 100%; justify-content:center; padding: 12px; margin-top: 10px;">
                 Cerrar Turno y Guardar Arqueo
             </button>
         `;
     } else {
         titulo.innerText = "Apertura de Turno de Caja";
         modalBody.innerHTML = `
-            <div class="form-group">
-                <label class="form-label">Número de Caja:</label>
-                <input type="text" class="input-text" id="apertura-caja-num" value="01">
+            <div style="margin-bottom: 12px;">
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Número de Caja:</label>
+                <input type="text" class="glass-input" id="apertura-caja-num" value="01" style="width:100%;">
             </div>
-            <div class="form-group">
-                <label class="form-label">Nombre del Cajero:</label>
-                <input type="text" class="input-text" id="apertura-cajero-nombre" value="CAJERO PRINCIPAL">
+            <div style="margin-bottom: 12px;">
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Nombre del Cajero:</label>
+                <input type="text" class="glass-input" id="apertura-cajero-nombre" value="CAJERO PRINCIPAL" style="width:100%;">
             </div>
-            <div class="form-group">
-                <label class="form-label">Fondo Inicial en Bolívares (Bs.):</label>
-                <input type="number" step="0.01" class="input-text" id="apertura-monto-ves" value="500.00">
+            <div style="margin-bottom: 12px;">
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Fondo Inicial en Bolívares (Bs.):</label>
+                <input type="number" step="0.01" class="glass-input" id="apertura-monto-ves" value="500.00" style="width:100%;">
             </div>
-            <div class="form-group">
-                <label class="form-label">Fondo Inicial en Divisas ($ USD):</label>
-                <input type="number" step="0.01" class="input-text" id="apertura-monto-usd" value="20.00">
+            <div style="margin-bottom: 14px;">
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Fondo Inicial en Divisas ($ USD):</label>
+                <input type="number" step="0.01" class="glass-input" id="apertura-monto-usd" value="20.00" style="width:100%;">
             </div>
-            <button onclick="ejecutarAperturaCaja()" class="btn btn-success" style="width: 100%; padding: 12px; margin-top: 10px;">
+            <button onclick="ejecutarAperturaCaja()" class="btn-glass btn-glass-success" style="width: 100%; justify-content:center; padding: 12px; margin-top: 10px;">
                 Abrir Caja y Comenzar Turno
             </button>
         `;
@@ -634,14 +664,14 @@ async function ejecutarAperturaCaja() {
         });
         const data = await res.json();
         if (res.ok) {
-            alert("Caja abierta exitosamente.");
+            mostrarToast("Caja abierta exitosamente.", 'success');
             cerrarModalCaja();
             cargarSesionCaja();
         } else {
-            alert(`Error: ${data.mensaje}`);
+            mostrarToast(`Error: ${data.mensaje}`, 'error');
         }
     } catch (err) {
-        alert("Error de conexión");
+        mostrarToast("Error de conexión", 'error');
     }
 }
 
@@ -657,14 +687,14 @@ async function ejecutarCierreCaja() {
         });
         const data = await res.json();
         if (res.ok) {
-            alert(`Turno cerrado.\nDiferencia Bs: ${data.diferenciaVes}\nDiferencia USD: ${data.diferenciaUsd}`);
+            mostrarToast(`Turno cerrado. Dif Bs: ${data.diferenciaVes} | Dif USD: ${data.diferenciaUsd}`, 'info');
             cerrarModalCaja();
             cargarSesionCaja();
         } else {
-            alert(`Error: ${data.mensaje}`);
+            mostrarToast(`Error: ${data.mensaje}`, 'error');
         }
     } catch (err) {
-        alert("Error de conexión");
+        mostrarToast("Error de conexión", 'error');
     }
 }
 

@@ -489,25 +489,132 @@
         </div>
     </div>
 
-    <!-- MODAL KÁRDEX -->
+    <!-- MODAL AJUSTE DE INVENTARIO FLOTANTE GLASSY -->
+    <div id="modal-ajuste-stock" class="modal-overlay" style="display: none;">
+        <div class="modal-glass-content" style="max-width: 520px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; border-bottom: 1px solid var(--glass-border); padding-bottom: 12px;">
+                <div>
+                    <h3 style="font-size: 1.2rem; font-weight: 800; display:flex; align-items:center; gap:8px;">
+                        <svg style="width:20px; height:20px; stroke:#3b82f6; stroke-width:2.2; fill:none;" viewBox="0 0 24 24"><path d="M12 20v-6M6 20V10M18 20V4"/></svg>
+                        <span>Ajuste de Existencias en Inventario</span>
+                    </h3>
+                    <div id="ajuste-prod-info" style="color: var(--text-muted); font-size: 0.84rem; margin-top: 4px;">Producto: --</div>
+                </div>
+                <button onclick="cerrarModalAjuste()" style="background:none; border:none; color:var(--text-muted); cursor:pointer;">
+                    <svg style="width:20px; height:20px; stroke:currentColor; stroke-width:2; fill:none;" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+            
+            <input type="hidden" id="ajuste-prod-id">
+
+            <!-- Selector Visual de Tipo de Ajuste -->
+            <div style="margin-bottom: 16px;">
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom: 8px; font-weight: 700; text-transform:uppercase; letter-spacing:0.5px;">
+                    OPERACIÓN DE AJUSTE FISCAL:
+                </label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <button type="button" id="btn-ajuste-pos" onclick="seleccionarTipoAjuste('AJUSTE_POSITIVO')" class="ajuste-type-btn active-positive" style="display:flex; align-items:center; justify-content:center; gap:8px; padding:12px; border-radius:12px; font-weight:700; font-size:0.88rem;">
+                        <svg style="width:16px; height:16px; stroke:#10b981; stroke-width:2.5; fill:none;" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+                        <span>+ Entrada (Sobrante)</span>
+                    </button>
+                    <button type="button" id="btn-ajuste-neg" onclick="seleccionarTipoAjuste('AJUSTE_NEGATIVO')" class="ajuste-type-btn" style="display:flex; align-items:center; justify-content:center; gap:8px; padding:12px; border-radius:12px; font-weight:700; font-size:0.88rem;">
+                        <svg style="width:16px; height:16px; stroke:#ef4444; stroke-width:2.5; fill:none;" viewBox="0 0 24 24"><path d="M5 12h14"/></svg>
+                        <span>- Salida (Merma / Daño)</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Balances en Vivo -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; background: rgba(8, 12, 22, 0.55); padding: 14px; border-radius: 14px; border: 1px solid var(--glass-border);">
+                <div>
+                    <span style="font-size:0.75rem; color:var(--text-muted); display:block;">Stock Actual en Sistema:</span>
+                    <strong id="ajuste-stock-actual" style="font-size: 1.25rem; color:#93c5fd;">0 UNID</strong>
+                </div>
+                <div style="text-align: right;">
+                    <span style="font-size:0.75rem; color:var(--text-muted); display:block;">Stock Resultante Estimado:</span>
+                    <strong id="ajuste-stock-estimado" style="font-size: 1.25rem; color:#86efac;">0 UNID</strong>
+                </div>
+            </div>
+
+            <!-- Cantidad a Ajustar -->
+            <div style="margin-bottom: 14px;">
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:6px; font-weight:700;">Cantidad a Ajustar:</label>
+                <input type="number" step="1" min="1" class="glass-input" id="ajuste-cantidad" value="1" style="width:100%; font-size: 1.15rem; font-weight: 800; text-align:right;" oninput="recalcularStockEstimadoAjuste()">
+            </div>
+
+            <!-- Motivo de Ajuste -->
+            <div style="margin-bottom: 16px;">
+                <label style="display:block; font-size:0.8rem; color:var(--text-muted); margin-bottom:6px; font-weight:700;">Motivo de Auditoría / Justificación Fiscal:</label>
+                <select class="glass-input" id="ajuste-motivo-select" style="width:100%; margin-bottom: 8px;" onchange="verificarMotivoPersonalizado(this)">
+                    <option value="Conteo Físico / Inventario Periódico">Conteo Físico / Inventario Periódico</option>
+                    <option value="Merma / Producto Roto o Dañado">Merma / Producto Roto o Dañado</option>
+                    <option value="Vencimiento de Producto Perecedero">Vencimiento de Producto Perecedero</option>
+                    <option value="Consumo Interno / Uso Operativo">Consumo Interno / Uso Operativo</option>
+                    <option value="Corrección de Inventario Inicial">Corrección de Inventario Inicial</option>
+                    <option value="OTRO">Otro Motivo (Especificar)</option>
+                </select>
+                <input type="text" class="glass-input" id="ajuste-motivo-otro" placeholder="Escriba el motivo detallado del ajuste..." style="width:100%; display: none;">
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                <button onclick="cerrarModalAjuste()" class="btn-glass">Cancelar</button>
+                <button onclick="guardarAjusteStockModal()" class="btn-glass btn-glass-primary" id="btn-confirmar-ajuste" style="font-weight:700;">
+                    Aplicar Ajuste Fiscal
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL KÁRDEX FLOTANTE GLASSY -->
     <div id="modal-kardex" class="modal-overlay" style="display: none;">
-        <div class="modal-glass-content" style="max-width: 800px;">
-            <h2 style="font-size: 1.25rem; font-weight: 800; margin-bottom: 16px;" id="kardex-modal-title">Kárdex de Producto</h2>
-            <div class="glass-table-wrapper" style="margin-top:0;">
+        <div class="modal-glass-content" style="max-width: 880px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; border-bottom: 1px solid var(--glass-border); padding-bottom: 12px;">
+                <div>
+                    <h2 style="font-size: 1.25rem; font-weight: 800; display:flex; align-items:center; gap:8px;">
+                        <svg style="width:22px; height:22px; stroke:#3b82f6; stroke-width:2.2; fill:none;" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+                        <span id="kardex-modal-title">Kárdex de Producto</span>
+                    </h2>
+                    <div id="kardex-modal-subtitle" style="font-size:0.82rem; color:var(--text-muted); margin-top:4px;">
+                        Historial cronológico auditado de entradas, salidas y existencias
+                    </div>
+                </div>
+                <button onclick="cerrarModalKardex()" style="background:none; border:none; color:var(--text-muted); cursor:pointer;">
+                    <svg style="width:20px; height:20px; stroke:currentColor; stroke-width:2; fill:none;" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <!-- Resumen de Movimientos Kárdex -->
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px;">
+                <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 12px; padding: 12px 14px;">
+                    <span style="font-size:0.75rem; color:#86efac; text-transform:uppercase; font-weight:700;">Total Entradas</span>
+                    <div id="kardex-total-entradas" style="font-size: 1.25rem; font-weight: 800; color:#86efac; margin-top:4px;">0</div>
+                </div>
+                <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 12px; padding: 12px 14px;">
+                    <span style="font-size:0.75rem; color:#fca5a5; text-transform:uppercase; font-weight:700;">Total Salidas</span>
+                    <div id="kardex-total-salidas" style="font-size: 1.25rem; font-weight: 800; color:#fca5a5; margin-top:4px;">0</div>
+                </div>
+                <div style="background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 12px; padding: 12px 14px;">
+                    <span style="font-size:0.75rem; color:#93c5fd; text-transform:uppercase; font-weight:700;">Stock Actual</span>
+                    <div id="kardex-stock-actual" style="font-size: 1.25rem; font-weight: 800; color:#93c5fd; margin-top:4px;">0</div>
+                </div>
+            </div>
+
+            <div class="glass-table-wrapper" style="margin-top:0; max-height: 380px; overflow-y: auto;">
                 <table class="glass-table">
                     <thead>
                         <tr>
-                            <th>Fecha</th>
-                            <th>Movimiento</th>
-                            <th>Cantidad</th>
-                            <th>Stock Ant.</th>
-                            <th>Stock Nuevo</th>
-                            <th>Referencia</th>
+                            <th>Fecha & Hora</th>
+                            <th>Tipo de Operación</th>
+                            <th style="text-align: right;">Cantidad</th>
+                            <th style="text-align: right;">Stock Ant.</th>
+                            <th style="text-align: right;">Stock Nuevo</th>
+                            <th>Documento / Justificación</th>
                         </tr>
                     </thead>
                     <tbody id="kardex-table-body"></tbody>
                 </table>
             </div>
+
             <div style="display: flex; justify-content: flex-end; margin-top: 16px;">
                 <button onclick="cerrarModalKardex()" class="btn-glass">Cerrar</button>
             </div>
@@ -676,5 +783,8 @@
             }
         }
     </script>
+
+    <!-- Contenedor de Notificaciones Toast Flotantes -->
+    <div id="toast-container" class="glass-toast-container"></div>
 </body>
 </html>

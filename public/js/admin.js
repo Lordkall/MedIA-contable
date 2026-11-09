@@ -2,6 +2,26 @@
  * Lógica Front-End para MeDIa Administrativo (Back-Office)
  */
 
+// ==========================================
+// TOAST NOTIFICATIONS MODERNAS FLOTANTES
+// ==========================================
+function mostrarToast(mensaje, tipo = 'info') {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+    const toast = document.createElement('div');
+    toast.className = `glass-toast toast-${tipo}`;
+    toast.innerHTML = `
+        <span style="font-size:1.1rem;">${tipo === 'success' ? '✓' : tipo === 'error' ? '✕' : 'ℹ'}</span>
+        <span>${mensaje}</span>
+    `;
+    container.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(40px)';
+        setTimeout(() => toast.remove(), 300);
+    }, 3200);
+}
+
 let adminState = {
     tasaBcv: 65.50,
     productos: [],
@@ -233,7 +253,7 @@ function filtrarInventario() {
 function renderizarTablaInventario(items) {
     const tbody = document.getElementById('inventario-table-body');
     if (!items || items.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:var(--text-secondary);">No hay productos registrados</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:var(--text-muted); padding:30px;">No hay productos registrados</td></tr>`;
         return;
     }
 
@@ -243,19 +263,23 @@ function renderizarTablaInventario(items) {
             <tr>
                 <td><code>${p.codigo_barra}</code></td>
                 <td><strong>${p.descripcion}</strong></td>
-                <td><small style="color:var(--text-secondary);">${p.categoria_nombre || 'General'}</small></td>
+                <td><small style="color:var(--text-muted);">${p.categoria_nombre || 'General'}</small></td>
                 <td><span class="prod-tag tag-${p.alicuota_iva}">${p.alicuota_iva === 'G' ? 'IVA 16%' : p.alicuota_iva === 'E' ? 'EXENTO' : p.alicuota_iva}</span></td>
                 <td>$ ${p.costo_usd.toFixed(2)}</td>
                 <td><strong>$ ${p.precio_usd.toFixed(2)}</strong></td>
                 <td><strong style="color:#86efac;">Bs. ${p.precio_ves.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}</strong></td>
                 <td style="${stockAlerta}">${p.stock_actual} ${p.unidad_medida}</td>
                 <td>
-                    <button onclick="verKardex(${p.id}, '${p.descripcion.replace(/'/g, "\\'")}')" class="btn btn-secondary" style="padding:4px 8px; font-size:0.75rem;">
-                        Kárdex
-                    </button>
-                    <button onclick="ajustarStockPrompt(${p.id}, '${p.descripcion.replace(/'/g, "\\'")}')" class="btn btn-secondary" style="padding:4px 8px; font-size:0.75rem;">
-                        Ajuste
-                    </button>
+                    <div style="display:flex; gap:6px;">
+                        <button onclick="verKardex(${p.id}, '${p.descripcion.replace(/'/g, "\\'")}', '${p.codigo_barra}', ${p.stock_actual}, '${p.unidad_medida}')" class="btn-glass" style="padding:4px 9px; font-size:0.75rem;" title="Ver historial de movimientos">
+                            <svg style="width:12px; height:12px; stroke:currentColor; stroke-width:2; fill:none;" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8"/></svg>
+                            <span>Kárdex</span>
+                        </button>
+                        <button onclick="abrirModalAjuste(${p.id}, '${p.descripcion.replace(/'/g, "\\'")}', '${p.codigo_barra}', ${p.stock_actual}, '${p.unidad_medida}')" class="btn-glass" style="padding:4px 9px; font-size:0.75rem;" title="Ajustar existencia">
+                            <svg style="width:12px; height:12px; stroke:currentColor; stroke-width:2; fill:none;" viewBox="0 0 24 24"><path d="M12 20v-6M6 20V10M18 20V4"/></svg>
+                            <span>Ajuste</span>
+                        </button>
+                    </div>
                 </td>
             </tr>
         `;
@@ -315,50 +339,104 @@ async function guardarProductoNuevo() {
     }
 }
 
-async function verKardex(prodId, desc) {
-    try {
-        const res = await fetch(`/api/inventario/kardex/${prodId}`);
-        const movimientos = await res.json();
-        document.getElementById('kardex-modal-title').innerText = `Kárdex: ${desc}`;
-        const tbody = document.getElementById('kardex-table-body');
+// ==========================================
+// KÁRDEX & AJUSTES FLOTANTES GLASSY
+// ==========================================
+let ajusteModalState = {
+    productoId: null,
+    stockActual: 0,
+    unidadMedida: 'UNID',
+    tipo: 'AJUSTE_POSITIVO'
+};
 
-        if (!movimientos || movimientos.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Sin movimientos registrados</td></tr>`;
+function abrirModalAjuste(prodId, desc, barcode, stockActual, unidad) {
+    ajusteModalState.productoId = prodId;
+    ajusteModalState.stockActual = stockActual !== undefined ? Number(stockActual) : 0;
+    ajusteModalState.unidadMedida = unidad || 'UNID';
+    ajusteModalState.tipo = 'AJUSTE_POSITIVO';
+
+    document.getElementById('ajuste-prod-id').value = prodId;
+    document.getElementById('ajuste-prod-info').innerText = `${desc} (Código: ${barcode || 'S/C'})`;
+    document.getElementById('ajuste-stock-actual').innerText = `${ajusteModalState.stockActual} ${ajusteModalState.unidadMedida}`;
+    document.getElementById('ajuste-cantidad').value = '1';
+    document.getElementById('ajuste-motivo-select').value = 'Conteo Físico / Inventario Periódico';
+    document.getElementById('ajuste-motivo-otro').style.display = 'none';
+    document.getElementById('ajuste-motivo-otro').value = '';
+
+    seleccionarTipoAjuste('AJUSTE_POSITIVO');
+    document.getElementById('modal-ajuste-stock').style.display = 'flex';
+}
+
+function cerrarModalAjuste() {
+    document.getElementById('modal-ajuste-stock').style.display = 'none';
+}
+
+function seleccionarTipoAjuste(tipo) {
+    ajusteModalState.tipo = tipo;
+    const btnPos = document.getElementById('btn-ajuste-pos');
+    const btnNeg = document.getElementById('btn-ajuste-neg');
+
+    if (tipo === 'AJUSTE_POSITIVO') {
+        btnPos.classList.add('active-positive');
+        btnNeg.classList.remove('active-negative');
+    } else {
+        btnPos.classList.remove('active-positive');
+        btnNeg.classList.add('active-negative');
+    }
+    recalcularStockEstimadoAjuste();
+}
+
+function recalcularStockEstimadoAjuste() {
+    const cant = parseFloat(document.getElementById('ajuste-cantidad').value) || 0;
+    const stockActual = ajusteModalState.stockActual;
+    const labelEstimado = document.getElementById('ajuste-stock-estimado');
+    const btnConfirmar = document.getElementById('btn-confirmar-ajuste');
+
+    let estimado = stockActual;
+    if (ajusteModalState.tipo === 'AJUSTE_POSITIVO') {
+        estimado = stockActual + cant;
+        labelEstimado.style.color = '#86efac';
+        btnConfirmar.disabled = cant <= 0;
+    } else {
+        estimado = stockActual - cant;
+        if (estimado < 0) {
+            labelEstimado.style.color = '#f87171';
+            btnConfirmar.disabled = true;
         } else {
-            tbody.innerHTML = movimientos.map(m => {
-                const esEntrada = m.tipo_movimiento.includes('ENTRADA') || m.tipo_movimiento.includes('INICIAL') || m.tipo_movimiento.includes('POS');
-                const badgeColor = esEntrada ? 'color:#86efac;' : 'color:#f87171;';
-                return `
-                    <tr>
-                        <td><small>${m.fecha}</small></td>
-                        <td style="${badgeColor}"><strong>${m.tipo_movimiento}</strong></td>
-                        <td>${m.cantidad}</td>
-                        <td>${m.stock_anterior}</td>
-                        <td><strong>${m.stock_nuevo}</strong></td>
-                        <td><code>${m.referencia_documento || ''}</code></td>
-                    </tr>
-                `;
-            }).join('');
+            labelEstimado.style.color = '#86efac';
+            btnConfirmar.disabled = cant <= 0;
         }
-        document.getElementById('modal-kardex').style.display = 'flex';
-    } catch (err) {
-        alert("Error al cargar kárdex");
+    }
+    labelEstimado.innerText = `${estimado} ${ajusteModalState.unidadMedida}`;
+}
+
+function verificarMotivoPersonalizado(sel) {
+    const inputOtro = document.getElementById('ajuste-motivo-otro');
+    if (sel.value === 'OTRO') {
+        inputOtro.style.display = 'block';
+        inputOtro.focus();
+    } else {
+        inputOtro.style.display = 'none';
     }
 }
 
-function cerrarModalKardex() {
-    document.getElementById('modal-kardex').style.display = 'none';
-}
+async function guardarAjusteStockModal() {
+    const prodId = ajusteModalState.productoId;
+    const cant = parseFloat(document.getElementById('ajuste-cantidad').value) || 0;
+    if (cant <= 0) {
+        mostrarToast("Ingrese una cantidad válida mayor a 0", 'error');
+        return;
+    }
 
-async function ajustarStockPrompt(prodId, desc) {
-    const tipo = prompt(`Ajuste de inventario para: ${desc}\nEscriba '+' para ajuste positivo (entrada) o '-' para negativo (merma/salida):`, '+');
-    if (tipo !== '+' && tipo !== '-') return;
+    const selMotivo = document.getElementById('ajuste-motivo-select').value;
+    let motivoFinal = selMotivo;
+    if (selMotivo === 'OTRO') {
+        motivoFinal = document.getElementById('ajuste-motivo-otro').value.trim() || 'Ajuste Manual Personalizado';
+    }
 
-    const cantStr = prompt("Cantidad a ajustar:", "1");
-    const cant = parseFloat(cantStr);
-    if (isNaN(cant) || cant <= 0) return;
-
-    const motivo = prompt("Motivo del ajuste:", "Conteo físico / Auditoría");
+    const btnConfirmar = document.getElementById('btn-confirmar-ajuste');
+    btnConfirmar.disabled = true;
+    btnConfirmar.innerText = "Aplicando Ajuste...";
 
     try {
         const res = await fetch('/api/inventario/ajustar', {
@@ -367,21 +445,83 @@ async function ajustarStockPrompt(prodId, desc) {
             body: JSON.stringify({
                 producto_id: prodId,
                 cantidad: cant,
-                tipo: tipo === '+' ? 'AJUSTE_POSITIVO' : 'AJUSTE_NEGATIVO',
-                motivo: motivo
+                tipo: ajusteModalState.tipo,
+                motivo: motivoFinal
             })
         });
+
+        const data = await res.json();
         if (res.ok) {
-            alert("Ajuste de stock procesado y registrado en el Kárdex.");
-            cargarInventario();
-            cargarKPIs();
+            mostrarToast("Ajuste de inventario aplicado y registrado en el Kárdex.", 'success');
+            cerrarModalAjuste();
+            await cargarInventario();
+            await cargarKPIs();
         } else {
-            const d = await res.json();
-            alert(`Error: ${d.mensaje}`);
+            mostrarToast(`Error: ${data.mensaje || 'No se pudo procesar el ajuste'}`, 'error');
         }
     } catch (err) {
-        alert("Error al comunicar con el servidor.");
+        mostrarToast("Error de conexión con el servidor", 'error');
+    } finally {
+        btnConfirmar.disabled = false;
+        btnConfirmar.innerText = "Aplicar Ajuste Fiscal";
     }
+}
+
+async function verKardex(prodId, desc, barcode, stockActual, unidad) {
+    try {
+        const res = await fetch(`/api/inventario/kardex/${prodId}`);
+        const movimientos = await res.json();
+
+        document.getElementById('kardex-modal-title').innerText = `Kárdex: ${desc}`;
+        document.getElementById('kardex-modal-subtitle').innerText = `Código: ${barcode || '--'} | Trazabilidad y auditoría SENIAT`;
+
+        let totalEntradas = 0;
+        let totalSalidas = 0;
+
+        const tbody = document.getElementById('kardex-table-body');
+        if (!movimientos || movimientos.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:30px;">Sin movimientos registrados para este producto</td></tr>`;
+        } else {
+            tbody.innerHTML = movimientos.map(m => {
+                const esEntrada = m.tipo_movimiento.includes('ENTRADA') || m.tipo_movimiento.includes('INICIAL') || m.tipo_movimiento === 'AJUSTE_POSITIVO' || m.tipo_movimiento.includes('COMPRA');
+                if (esEntrada) {
+                    totalEntradas += m.cantidad;
+                } else {
+                    totalSalidas += m.cantidad;
+                }
+
+                const badgeBg = esEntrada ? 'background:rgba(16, 185, 129, 0.2); color:#86efac; border:1px solid rgba(16, 185, 129, 0.4);' : 'background:rgba(239, 68, 68, 0.2); color:#fca5a5; border:1px solid rgba(239, 68, 68, 0.4);';
+                const signo = esEntrada ? '+' : '-';
+
+                return `
+                    <tr>
+                        <td><small style="color:var(--text-muted);">${m.fecha}</small></td>
+                        <td>
+                            <span style="font-size:0.75rem; font-weight:800; padding:3px 8px; border-radius:6px; display:inline-block; ${badgeBg}">
+                                ${m.tipo_movimiento}
+                            </span>
+                        </td>
+                        <td style="text-align: right; font-weight:800; color:${esEntrada ? '#86efac' : '#fca5a5'};">${signo}${m.cantidad}</td>
+                        <td style="text-align: right; color:var(--text-muted);">${m.stock_anterior}</td>
+                        <td style="text-align: right; font-weight:700; color:#93c5fd;">${m.stock_nuevo}</td>
+                        <td><code>${m.referencia_documento || 'S/R'}</code></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        document.getElementById('kardex-total-entradas').innerText = `+${totalEntradas} ${unidad || 'UNID'}`;
+        document.getElementById('kardex-total-salidas').innerText = `-${totalSalidas} ${unidad || 'UNID'}`;
+        document.getElementById('kardex-stock-actual').innerText = `${stockActual !== undefined ? stockActual : (totalEntradas - totalSalidas)} ${unidad || 'UNID'}`;
+
+        document.getElementById('modal-kardex').style.display = 'flex';
+    } catch (err) {
+        mostrarToast("Error al cargar movimientos del Kárdex", 'error');
+    }
+}
+
+function cerrarModalKardex() {
+    document.getElementById('modal-kardex').style.display = 'none';
 }
 
 // ==========================================
