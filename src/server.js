@@ -19,6 +19,8 @@ const InventarioService = require('./services/inventarioService');
 const ComprasService = require('./services/comprasService');
 const TercerosService = require('./services/tercerosService');
 const ReportesService = require('./services/reportesService');
+const UnidigitalService = require('./services/unidigitalService');
+const FiscalPrinter = require('./engine/printer');
 
 // Inicializar base de datos con datos semilla y triggers de inalterabilidad
 seed();
@@ -35,6 +37,8 @@ const MIME_TYPES = {
     '.json': 'application/json; charset=utf-8',
     '.png': 'image/png',
     '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.webp': 'image/webp',
     '.svg': 'image/svg+xml'
 };
 
@@ -81,10 +85,10 @@ const server = http.createServer(async (req, res) => {
         return;
     }
 
-    const parsedUrl = url.parse(req.url, true);
+    const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
     const pathname = parsedUrl.pathname;
     const method = req.method;
-    const query = parsedUrl.query;
+    const query = Object.fromEntries(parsedUrl.searchParams);
 
     try {
         // ==========================================
@@ -107,6 +111,40 @@ const server = http.createServer(async (req, res) => {
         if (pathname === '/api/configuracion' && method === 'GET') {
             const conf = db.get("SELECT * FROM configuracion WHERE id = 1");
             return sendJSON(res, conf);
+        }
+        if (pathname === '/api/configuracion' && method === 'POST') {
+            const body = await parseBody(req);
+            db.run(`
+                UPDATE configuracion SET 
+                    razon_social = COALESCE(?, razon_social),
+                    rif = COALESCE(?, rif),
+                    direccion = COALESCE(?, direccion),
+                    telefono = COALESCE(?, telefono),
+                    email = COALESCE(?, email),
+                    modalidad_emision = COALESCE(?, modalidad_emision),
+                    unidigital_token = COALESCE(?, unidigital_token),
+                    unidigital_url = COALESCE(?, unidigital_url),
+                    unidigital_ambiente = COALESCE(?, unidigital_ambiente),
+                    actualizado_en = CURRENT_TIMESTAMP
+                WHERE id = 1
+            `, [
+                body.razon_social,
+                body.rif,
+                body.direccion,
+                body.telefono,
+                body.email,
+                body.modalidad_emision,
+                body.unidigital_token,
+                body.unidigital_url,
+                body.unidigital_ambiente
+            ]);
+            const conf = db.get("SELECT * FROM configuracion WHERE id = 1");
+            return sendJSON(res, conf);
+        }
+        if (pathname === '/api/unidigital/probar-conexion' && method === 'POST') {
+            const body = await parseBody(req);
+            const resultado = await UnidigitalService.probarConexion(body.token, body.url);
+            return sendJSON(res, resultado);
         }
 
         // --- PUNTO DE VENTA (MeDIa POS) ---
@@ -145,6 +183,18 @@ const server = http.createServer(async (req, res) => {
         if (pathname === '/api/pos/auditoria-integridad' && method === 'GET') {
             const audit = CorrelativoEngine.auditarIntegridadYCorrelatividad();
             return sendJSON(res, audit);
+        }
+        if (pathname.startsWith('/api/pos/ticket/') && method === 'GET') {
+            const parts = pathname.split('/');
+            const ventaId = parts[parts.length - 1];
+            const venta = db.get("SELECT * FROM ventas WHERE id = ? OR numero_factura_fiscal = ?", [ventaId, ventaId]);
+            if (!venta) return sendError(res, "Venta fiscal no encontrada", 404);
+            const cliente = db.get("SELECT * FROM clientes WHERE id = ?", [venta.cliente_id]) || { razon_social: 'CONSUMIDOR FINAL', rif_completo: 'V-00000000-0', direccion: 'Mostrador' };
+            const items = db.query("SELECT * FROM ventas_items WHERE venta_id = ?", [venta.id]);
+            const pagos = db.query("SELECT * FROM ventas_pagos WHERE venta_id = ?", [venta.id]);
+            const printer = new FiscalPrinter();
+            const ticketTexto = printer.generarTicketFiscal(venta, cliente, items, pagos);
+            return sendJSON(res, { ticket: ticketTexto, venta });
         }
 
         // --- INVENTARIO & PRODUCTOS ---
@@ -252,13 +302,43 @@ const server = http.createServer(async (req, res) => {
             return sendJSON(res, rg);
         }
 
+        if (pathname === '/api/inventario/upload-imagen' && method === 'POST') {
+            const body = await parseBody(req);
+            if (!body || !body.data) {
+                return sendError(res, "No se recibió archivo de imagen", 400);
+            }
+            const base64Data = body.data;
+            const matches = base64Data.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
+            if (!matches) {
+                return sendError(res, "Formato de imagen inválido. Debe ser una imagen en base64.", 400);
+            }
+            const rawExt = matches[1].toLowerCase();
+            const ext = rawExt === 'jpeg' ? 'jpg' : rawExt === 'svg+xml' ? 'svg' : rawExt;
+            const buffer = Buffer.from(matches[2], 'base64');
+            const fileName = `prod_${Date.now()}_${Math.floor(Math.random() * 10000)}.${ext}`;
+            const uploadDir = path.join(PUBLIC_DIR, 'img', 'products');
+            if (!fs.existsSync(uploadDir)) {
+                fs.mkdirSync(uploadDir, { recursive: true });
+            }
+            const targetPath = path.join(uploadDir, fileName);
+            fs.writeFileSync(targetPath, buffer);
+            const publicUrl = `/img/products/${fileName}`;
+            return sendJSON(res, { success: true, url: publicUrl });
+        }
+
         // ==========================================
         // SERVIDOR DE ARCHIVOS ESTÁTICOS (FRONTEND)
         // ==========================================
-        let filePath = pathname === '/' ? path.join(PUBLIC_DIR, 'index.html') : path.join(PUBLIC_DIR, pathname);
+        if (pathname === '/' || pathname === '/index.html') {
+            res.writeHead(302, { 'Location': '/admin.html' });
+            res.end();
+            return;
+        }
+
+        let filePath = path.join(PUBLIC_DIR, pathname);
 
         if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
-            filePath = path.join(PUBLIC_DIR, 'index.html');
+            filePath = path.join(PUBLIC_DIR, 'admin.html');
         }
 
         const ext = path.extname(filePath).toLowerCase();

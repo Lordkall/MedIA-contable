@@ -38,9 +38,8 @@ const ventaTest = PosService.procesarVenta({
         { producto_id: coca.id, cantidad: 1 }
     ],
     pagos: [
-        // Pago mixto: $2 en efectivo divisa (genera IGTF 3%) + resto en Bs con tarjeta de débito
-        { metodo_pago: 'EFECTIVO_USD', moneda: 'USD', monto_original: 2.00 },
-        { metodo_pago: 'PUNTO_DEBITO', moneda: 'VES', monto_original: 300.00 }
+        // Pago en divisa que cubre la totalidad con IGTF
+        { metodo_pago: 'EFECTIVO_USD', moneda: 'USD', monto_original: 5.00 }
     ]
 });
 

@@ -147,6 +147,8 @@ CREATE TABLE IF NOT EXISTS ventas (
     base_igtf_ves REAL DEFAULT 0.0,
     monto_igtf_ves REAL DEFAULT 0.0,             -- 3%
     total_final_con_igtf_ves REAL NOT NULL,
+    hash_seguridad TEXT,
+    hash_anterior TEXT,
     estado TEXT CHECK(estado IN ('PROCESADA', 'ANULADA')) DEFAULT 'PROCESADA',
     FOREIGN KEY (sesion_caja_id) REFERENCES sesiones_caja(id),
     FOREIGN KEY (cliente_id) REFERENCES clientes(id)

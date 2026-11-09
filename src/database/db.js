@@ -22,6 +22,15 @@ class DBManager {
         } catch (e) {
             // Columna ya existe
         }
+        try { this.db.exec("ALTER TABLE configuracion ADD COLUMN modalidad_emision TEXT DEFAULT 'LOCAL';"); } catch (e) {}
+        try { this.db.exec("ALTER TABLE configuracion ADD COLUMN unidigital_token TEXT DEFAULT '';"); } catch (e) {}
+        try { this.db.exec("ALTER TABLE configuracion ADD COLUMN unidigital_url TEXT DEFAULT 'https://api-sandbox.unidigital.com.ve/v1';"); } catch (e) {}
+        try { this.db.exec("ALTER TABLE configuracion ADD COLUMN unidigital_ambiente TEXT DEFAULT 'SANDBOX';"); } catch (e) {}
+        try { this.db.exec("ALTER TABLE ventas ADD COLUMN unidigital_id TEXT;"); } catch (e) {}
+        try { this.db.exec("ALTER TABLE ventas ADD COLUMN unidigital_pdf_url TEXT;"); } catch (e) {}
+        try { this.db.exec("ALTER TABLE ventas ADD COLUMN unidigital_xml_url TEXT;"); } catch (e) {}
+        try { this.db.exec("ALTER TABLE ventas ADD COLUMN unidigital_qr TEXT;"); } catch (e) {}
+        try { this.db.exec("ALTER TABLE ventas ADD COLUMN unidigital_status TEXT;"); } catch (e) {}
     }
 
     query(sql, params = []) {

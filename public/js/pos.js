@@ -33,6 +33,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Atajos de Teclado
     document.addEventListener('keydown', (e) => {
+        if (e.key === 'F4') {
+            e.preventDefault();
+            abrirModalClientePOS();
+        }
         if (e.key === 'F12') {
             e.preventDefault();
             if (state.carrito.length > 0) abrirModalCobro();
@@ -41,6 +45,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             cerrarModalCobro();
             cerrarModalTicket();
             cerrarModalCaja();
+            cerrarModalClientePOS();
         }
     });
 
@@ -61,10 +66,17 @@ async function cargarTasaBCV() {
     try {
         const res = await fetch('/api/bcv/tasa');
         const data = await res.json();
-        state.tasaBcv = data.tasa;
-        document.getElementById('pos-bcv-rate').innerText = `Bs. ${state.tasaBcv.toFixed(2)}`;
+        if (data && data.tasa) {
+            state.tasaBcv = Number(data.tasa);
+        }
+        const bcvEl = document.getElementById('pos-bcv-rate');
+        if (bcvEl) {
+            bcvEl.innerText = `Bs. ${(state.tasaBcv || 897.54).toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+        }
     } catch (err) {
         console.error('Error al cargar tasa BCV', err);
+        const bcvEl = document.getElementById('pos-bcv-rate');
+        if (bcvEl) bcvEl.innerText = `Bs. ${(state.tasaBcv || 897.54).toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
     }
 }
 
@@ -76,7 +88,7 @@ async function sincronizarBCVAutoPOS(btnEl) {
         const data = await res.json();
         if (res.ok && data.exito) {
             state.tasaBcv = data.tasa;
-            document.getElementById('pos-bcv-rate').innerText = `Bs. ${data.tasa.toFixed(2)}`;
+            document.getElementById('pos-bcv-rate').innerText = `Bs. ${data.tasa.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
             await cargarCatalogo();
             actualizarCarritoUI();
         }
@@ -111,7 +123,17 @@ async function cargarCategorias() {
         const container = document.getElementById('category-pills-container');
         container.innerHTML = `<button class="pill-btn active" onclick="filtrarCategoria(null, this)">Todos</button>`;
         state.categorias.forEach(cat => {
-            container.innerHTML += `<button class="pill-btn" onclick="filtrarCategoria(${cat.id}, this)">${cat.nombre.split(' ')[0]}</button>`;
+            let label = cat.nombre;
+            if (cat.codigo === 'LUBR') label = 'Lubricantes';
+            else if (cat.codigo === 'FREN') label = 'Frenos & Clutch';
+            else if (cat.codigo === 'TRAN') label = 'Arrastre & Cadenas';
+            else if (cat.codigo === 'ELEC') label = 'Eléctrico & Luces';
+            else if (cat.codigo === 'MOTO') label = 'Motor & Carburador';
+            else if (cat.codigo === 'NEUM') label = 'Cauchos & Tripas';
+            else if (cat.codigo === 'ACCE') label = 'Cascos & Accesorios';
+            else label = cat.nombre.replace(/,/g, '').split(' ')[0];
+
+            container.innerHTML += `<button class="pill-btn" onclick="filtrarCategoria(${cat.id}, this)">${label}</button>`;
         });
     } catch (err) {
         console.error('Error al cargar categorías', err);
@@ -122,78 +144,180 @@ async function cargarClientes() {
     try {
         const res = await fetch('/api/terceros/clientes');
         state.clientes = await res.json();
-        const select = document.getElementById('cart-client-select');
-        select.innerHTML = '';
-        state.clientes.forEach(c => {
-            select.innerHTML += `<option value="${c.id}">${c.razon_social} (${c.rif_completo})</option>`;
-        });
-        
-        // Seleccionar Consumidor Final por defecto si existe, o el primero
-        const consFinal = state.clientes.find(c => c.numero_documento === '00000000');
-        if (consFinal) {
-            state.clienteSeleccionadoId = consFinal.id;
-            select.value = consFinal.id;
-        } else {
-            state.clienteSeleccionadoId = state.clientes[0] ? state.clientes[0].id : null;
-        }
-
-        actualizarFichaClienteDisplay(state.clienteSeleccionadoId);
-
+        seleccionarConsumidorFinal();
     } catch (err) {
         console.error('Error al cargar clientes', err);
     }
 }
 
-function alCambiarClientePOS(selectEl) {
-    state.clienteSeleccionadoId = selectEl.value;
-    actualizarFichaClienteDisplay(selectEl.value);
+function actualizarBarraClienteUI(cliente) {
+    const nombreEl = document.getElementById('pos-display-cliente-nombre');
+    const docEl = document.getElementById('pos-display-cliente-doc');
+    const tipoEl = document.getElementById('pos-display-cliente-tipo');
+
+    if (!cliente) {
+        if (nombreEl) nombreEl.innerText = 'CONSUMIDOR FINAL / CONTADO';
+        if (docEl) docEl.innerText = 'V-00000000';
+        if (tipoEl) tipoEl.innerText = 'Mostrador Local';
+        return;
+    }
+
+    const docPrefijo = cliente.tipo_documento || 'V';
+    const docNum = cliente.numero_documento || '00000000';
+    const docDig = cliente.digito_verificador ? `-${cliente.digito_verificador}` : '';
+    const rifCompleto = cliente.rif_completo || `${docPrefijo}-${docNum}${docDig}`;
+
+    if (nombreEl) nombreEl.innerText = (cliente.razon_social || 'CONSUMIDOR FINAL / CONTADO').toUpperCase();
+    if (docEl) docEl.innerText = rifCompleto;
+    if (tipoEl) tipoEl.innerText = cliente.direccion || (cliente.tipo_contribuyente === 'ESPECIAL' ? 'Sujeto Pasivo Especial' : 'Mostrador Local');
 }
 
 function seleccionarConsumidorFinal() {
     const consFinal = state.clientes.find(c => c.numero_documento === '00000000');
-    const select = document.getElementById('cart-client-select');
-    if (consFinal) {
-        state.clienteSeleccionadoId = consFinal.id;
-        select.value = consFinal.id;
-        actualizarFichaClienteDisplay(consFinal.id);
-        mostrarToast("Cliente: Consumidor Final (Contado)", 'info');
+    state.clienteSeleccionadoId = consFinal ? consFinal.id : 1;
+    actualizarBarraClienteUI(consFinal || {
+        razon_social: 'CONSUMIDOR FINAL / CONTADO',
+        tipo_documento: 'V',
+        numero_documento: '00000000',
+        direccion: 'Mostrador Local'
+    });
+}
+
+function abrirModalClientePOS() {
+    const modal = document.getElementById('modal-cliente-pos');
+    if (!modal) return;
+    modal.style.display = 'flex';
+
+    const searchInput = document.getElementById('modal-client-search');
+    if (searchInput) {
+        searchInput.value = '';
+        setTimeout(() => searchInput.focus(), 60);
+    }
+
+    const clienteActual = state.clientes.find(c => c.id === state.clienteSeleccionadoId);
+    if (clienteActual) {
+        poblarCamposModalCliente(clienteActual, true);
+    } else {
+        const consFinal = state.clientes.find(c => c.numero_documento === '00000000');
+        poblarCamposModalCliente(consFinal || {
+            tipo_documento: 'V',
+            numero_documento: '00000000',
+            digito_verificador: '0',
+            razon_social: 'CONSUMIDOR FINAL / CONTADO',
+            direccion: 'Mostrador Local',
+            telefono: '--',
+            tipo_contribuyente: 'NO_CONTRIBUYENTE'
+        }, true);
     }
 }
 
-function actualizarFichaClienteDisplay(clienteId) {
-    const cliente = state.clientes.find(c => String(c.id) === String(clienteId));
+function cerrarModalClientePOS() {
+    const modal = document.getElementById('modal-cliente-pos');
+    if (modal) modal.style.display = 'none';
+    const barcodeInput = document.getElementById('barcode-input');
+    if (barcodeInput) barcodeInput.focus();
+}
+
+function poblarCamposModalCliente(cliente, esRegistrado) {
     if (!cliente) return;
+    if (document.getElementById('modal-cli-tipo')) document.getElementById('modal-cli-tipo').value = cliente.tipo_documento || 'V';
+    if (document.getElementById('modal-cli-num')) document.getElementById('modal-cli-num').value = cliente.numero_documento || '';
+    if (document.getElementById('modal-cli-dig')) document.getElementById('modal-cli-dig').value = (cliente.digito_verificador !== undefined && cliente.digito_verificador !== null) ? cliente.digito_verificador : '';
+    if (document.getElementById('modal-cli-razon')) document.getElementById('modal-cli-razon').value = cliente.razon_social || '';
+    if (document.getElementById('modal-cli-dir')) document.getElementById('modal-cli-dir').value = cliente.direccion || '';
+    if (document.getElementById('modal-cli-tlf')) document.getElementById('modal-cli-tlf').value = cliente.telefono || '';
+    if (document.getElementById('modal-cli-contrib')) document.getElementById('modal-cli-contrib').value = cliente.tipo_contribuyente || 'NO_CONTRIBUYENTE';
 
-    const nombreEl = document.getElementById('client-display-nombre');
-    const rifEl = document.getElementById('client-display-rif');
-    const dirEl = document.getElementById('client-display-direccion');
-    const tlfEl = document.getElementById('client-display-telefono');
-
-    if (nombreEl) nombreEl.innerText = cliente.razon_social;
-    if (rifEl) rifEl.innerText = cliente.rif_completo;
-    if (dirEl) dirEl.innerText = cliente.direccion || 'Mostrador / Sin dirección física';
-    if (tlfEl) tlfEl.innerText = cliente.telefono || '--';
+    const badge = document.getElementById('modal-cli-badge');
+    if (badge) {
+        if (cliente.numero_documento === '00000000') {
+            badge.innerText = '✓ Consumidor Final';
+            badge.style.color = '#86efac';
+            badge.style.background = 'rgba(16, 185, 129, 0.2)';
+            badge.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+        } else if (esRegistrado) {
+            badge.innerText = '✓ Cliente Registrado';
+            badge.style.color = '#86efac';
+            badge.style.background = 'rgba(16, 185, 129, 0.2)';
+            badge.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+        } else {
+            badge.innerText = '✎ Nuevo Cliente';
+            badge.style.color = '#93c5fd';
+            badge.style.background = 'rgba(59, 130, 246, 0.2)';
+            badge.style.borderColor = 'rgba(59, 130, 246, 0.4)';
+        }
+    }
 }
 
-function abrirModalNuevoClientePOS() {
-    document.getElementById('modal-nuevo-cliente-pos').style.display = 'flex';
+function alBuscarClienteEnModal(val) {
+    const term = (val || '').trim();
+    if (!term) return;
+
+    const cleanNum = term.replace(/[^0-9]/g, '');
+    const cleanUpper = term.toUpperCase().replace(/\s+/g, '');
+
+    const match = state.clientes.find(c => {
+        const cNum = (c.numero_documento || '').replace(/[^0-9]/g, '');
+        const cRif = (c.rif_completo || '').toUpperCase().replace(/[^0-9A-Z]/g, '');
+        return (cleanNum && cNum === cleanNum) || (cleanUpper && cRif.includes(cleanUpper)) || (c.razon_social && c.razon_social.toUpperCase().includes(term.toUpperCase()));
+    });
+
+    if (match) {
+        poblarCamposModalCliente(match, true);
+    } else {
+        const tipoEl = document.getElementById('modal-cli-tipo');
+        if (cleanUpper.startsWith('J') && tipoEl) tipoEl.value = 'J';
+        else if (cleanUpper.startsWith('G') && tipoEl) tipoEl.value = 'G';
+        else if (cleanUpper.startsWith('E') && tipoEl) tipoEl.value = 'E';
+
+        poblarCamposModalCliente({
+            tipo_documento: (tipoEl ? tipoEl.value : 'V'),
+            numero_documento: cleanNum || term,
+            digito_verificador: '',
+            razon_social: '',
+            direccion: '',
+            telefono: '',
+            tipo_contribuyente: 'ORDINARIO'
+        }, false);
+    }
 }
 
-function cerrarModalNuevoClientePOS() {
-    document.getElementById('modal-nuevo-cliente-pos').style.display = 'none';
+function asignarConsumidorFinalDesdeModal() {
+    seleccionarConsumidorFinal();
+    cerrarModalClientePOS();
+    mostrarToast('Cliente: Consumidor Final (Contado)', 'info');
 }
 
-async function guardarNuevoClienteDesdePOS() {
-    const tipo = document.getElementById('pos-cli-tipo').value;
-    const num = document.getElementById('pos-cli-num').value.trim();
-    const digito = document.getElementById('pos-cli-digito').value.trim();
-    const razon = document.getElementById('pos-cli-nombre').value.trim();
-    const direccion = document.getElementById('pos-cli-direccion').value.trim();
-    const telefono = document.getElementById('pos-cli-telefono').value.trim();
-    const tipoContrib = document.getElementById('pos-cli-contrib').value;
+async function confirmarClienteYPasarAlPOS() {
+    const tipoEl = document.getElementById('modal-cli-tipo');
+    const numEl = document.getElementById('modal-cli-num');
+    const digEl = document.getElementById('modal-cli-dig');
+    const razonEl = document.getElementById('modal-cli-razon');
+    const dirEl = document.getElementById('modal-cli-dir');
+    const tlfEl = document.getElementById('modal-cli-tlf');
+    const contribEl = document.getElementById('modal-cli-contrib');
 
-    if (!num || !razon) {
-        mostrarToast("Cédula/RIF y Razón Social son obligatorios.", 'error');
+    const tipo = (tipoEl ? tipoEl.value : 'V').toUpperCase();
+    const num = (numEl ? numEl.value : '').trim().replace(/[^0-9]/g, '');
+    const dig = (digEl ? digEl.value : '').trim();
+    const razon = (razonEl ? razonEl.value : '').trim();
+    const dir = (dirEl ? dirEl.value : '').trim();
+    const tlf = (tlfEl ? tlfEl.value : '').trim();
+    const contrib = contribEl ? contribEl.value : 'ORDINARIO';
+
+    if (!num || num === '00000000' || !razon || razon.toUpperCase().includes('CONSUMIDOR FINAL')) {
+        seleccionarConsumidorFinal();
+        cerrarModalClientePOS();
+        mostrarToast('Venta asignada a Consumidor Final', 'info');
+        return;
+    }
+
+    const match = state.clientes.find(c => (c.numero_documento || '').replace(/[^0-9]/g, '') === num);
+    if (match) {
+        state.clienteSeleccionadoId = match.id;
+        actualizarBarraClienteUI(match);
+        cerrarModalClientePOS();
+        mostrarToast(`Cliente seleccionado: ${match.razon_social}`, 'success');
         return;
     }
 
@@ -204,30 +328,45 @@ async function guardarNuevoClienteDesdePOS() {
             body: JSON.stringify({
                 tipo_documento: tipo,
                 numero_documento: num,
-                digito_verificador: digito,
+                digito_verificador: dig,
                 razon_social: razon,
-                direccion: direccion,
-                telefono: telefono,
-                tipo_contribuyente: tipoContrib
+                direccion: dir || 'Ciudad',
+                telefono: tlf,
+                tipo_contribuyente: contrib
             })
         });
-
         const data = await res.json();
-        if (res.ok) {
-            mostrarToast("Cliente registrado y seleccionado para la factura.", 'success');
-            cerrarModalNuevoClientePOS();
-            // Recargar lista y seleccionar nuevo
-            await cargarClientes();
-            const select = document.getElementById('cart-client-select');
-            select.value = data.id;
+        if (res.ok && data && data.id) {
+            state.clientes.push(data);
             state.clienteSeleccionadoId = data.id;
-            actualizarFichaClienteDisplay(data.id);
+            actualizarBarraClienteUI(data);
+            cerrarModalClientePOS();
+            mostrarToast(`✓ Cliente guardado: ${razon}`, 'success');
         } else {
-            mostrarToast(`Error: ${data.mensaje}`, 'error');
+            console.warn('Aviso al registrar cliente:', data.mensaje);
+            seleccionarConsumidorFinal();
+            cerrarModalClientePOS();
         }
-    } catch (err) {
-        mostrarToast("Error de conexión al registrar cliente.", 'error');
+    } catch (e) {
+        console.error('Error registrando cliente:', e);
+        cerrarModalClientePOS();
     }
+}
+
+async function asegurarClienteSeleccionado() {
+    if (state.clienteSeleccionadoId) {
+        return state.clienteSeleccionadoId;
+    }
+    const consFinal = state.clientes.find(c => c.numero_documento === '00000000');
+    return consFinal ? consFinal.id : 1;
+}
+
+function abrirModalNuevoClientePOS() {
+    abrirModalClientePOS();
+}
+
+function cerrarModalNuevoClientePOS() {
+    cerrarModalClientePOS();
 }
 
 async function cargarCatalogo(busqueda = '', catId = null) {
@@ -257,7 +396,7 @@ function buscarProductosManual() {
 }
 
 // ==========================================
-// RENDERIZADO DEL CATÁLOGO EN POS (CON FOTOS Y GLASS V5)
+// RENDERIZADO DEL CATÁLOGO EN POS (FOTOS + COSTOS + TASA BCV)
 // ==========================================
 function renderizarCatalogo() {
     const container = document.getElementById('pos-products-container');
@@ -270,28 +409,43 @@ function renderizarCatalogo() {
         const stockAlerta = prod.stock_actual <= prod.stock_minimo ? 'color:#f87171;' : 'color:#86efac;';
         const imgUrl = prod.imagen_url || '/img/products/placeholder.svg';
         const catTintClass = `cat-tint-${prod.categoria_id || 1}`;
+        const costoUsd = prod.costo_usd !== undefined ? Number(prod.costo_usd) : 0;
+        const costoVes = prod.costo_ves !== undefined ? Number(prod.costo_ves) : Math.round((costoUsd * state.tasaBcv) * 100) / 100;
 
         return `
             <div class="product-card ${catTintClass}" onclick="agregarAlCarritoPorId(${prod.id})">
-                <!-- Foto del Producto -->
-                <div class="product-img-box">
-                    <img src="${imgUrl}" alt="${prod.descripcion}" class="product-img" onerror="this.onerror=null; this.src='/img/products/placeholder.svg';">
-                    <span class="prod-tag tag-${prod.alicuota_iva}" style="position:absolute; top:6px; left:6px;">${getNombreAlicuota(prod.alicuota_iva)}</span>
-                    <code style="position:absolute; top:6px; right:6px; font-size:0.65rem; background:rgba(0,0,0,0.6); padding:2px 6px; border-radius:4px; color:#94a3b8;">${prod.codigo_barra}</code>
+                <!-- Barra Superior de Identificación Fiscal y Código -->
+                <div class="prod-card-top-bar">
+                    <span class="prod-tag tag-${prod.alicuota_iva}">${getNombreAlicuota(prod.alicuota_iva)}</span>
+                    <span class="prod-barcode-badge">
+                        <svg style="width:11px; height:11px; stroke:currentColor; stroke-width:2.2; fill:none; opacity:0.8;" viewBox="0 0 24 24"><path d="M3 5v14M8 5v14M12 5v14M17 5v14M21 5v14"/></svg>
+                        <span>${prod.codigo_barra}</span>
+                    </span>
                 </div>
 
+                <!-- Foto del Producto (Garantizada Visible con 110px de Alto) -->
+                <div class="product-img-box">
+                    <img src="${imgUrl}" alt="${prod.descripcion}" class="product-img" onerror="this.onerror=null; this.src='/img/products/placeholder.svg';">
+                </div>
+
+                <!-- Título del Producto -->
                 <div>
                     <div class="prod-desc" title="${prod.descripcion}">${prod.descripcion}</div>
                 </div>
 
+                <!-- Precios, Costo y Stock -->
                 <div>
                     <div class="prod-prices">
                         <span class="price-ves">Bs. ${prod.precio_ves.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
                         <span class="price-usd">$ ${prod.precio_usd.toFixed(2)}</span>
                     </div>
+                    <div class="prod-cost-row">
+                        <span>Costo Ref: <strong class="prod-cost-val">$ ${costoUsd.toFixed(2)}</strong></span>
+                        <span>(Bs. ${costoVes.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})})</span>
+                    </div>
                     <div class="prod-footer">
                         <span class="prod-stock">Stock: <strong style="${stockAlerta}">${prod.stock_actual}</strong> ${prod.unidad_medida}</span>
-                        <span style="font-size: 0.72rem; color: #60a5fa; font-weight:700;">+ Agregar</span>
+                        <span style="font-size: 0.74rem; color: #60a5fa; font-weight:800;">+ Agregar</span>
                     </div>
                 </div>
             </div>
@@ -310,14 +464,104 @@ function getNombreAlicuota(alic) {
 // ==========================================
 // TOAST NOTIFICATIONS MODERNAS FLOTANTES
 // ==========================================
+let alertaGlassCallback = null;
+
+function mostrarAlertaFlotante(titulo, mensaje, tipo = 'success') {
+    const modal = document.getElementById('modal-alerta-glass');
+    if (!modal) {
+        mostrarToast(`${titulo}: ${mensaje}`, tipo);
+        return;
+    }
+    const iconEl = document.getElementById('alerta-glass-icon');
+    const titleEl = document.getElementById('alerta-glass-titulo');
+    const msgEl = document.getElementById('alerta-glass-mensaje');
+    const btnCancel = document.getElementById('alerta-glass-btn-cancelar');
+    const btnAceptar = document.getElementById('alerta-glass-btn-aceptar');
+
+    if (btnCancel) btnCancel.style.display = 'none';
+    if (btnAceptar) {
+        btnAceptar.innerText = 'Aceptar';
+        btnAceptar.className = 'btn-glass btn-glass-primary';
+    }
+    alertaGlassCallback = null;
+
+    if (iconEl) {
+        if (tipo === 'success') {
+            iconEl.innerHTML = '<span style="color:#86efac; filter:drop-shadow(0 0 12px rgba(16,185,129,0.5));">✓</span>';
+        } else if (tipo === 'error') {
+            iconEl.innerHTML = '<span style="color:#f87171; filter:drop-shadow(0 0 12px rgba(239,68,68,0.5));">✕</span>';
+        } else if (tipo === 'warning') {
+            iconEl.innerHTML = '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 12px rgba(245,158,11,0.5));"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+        } else {
+            iconEl.innerHTML = '<span style="color:#93c5fd; filter:drop-shadow(0 0 12px rgba(59,130,246,0.5));">ℹ</span>';
+        }
+    }
+    if (titleEl) titleEl.innerText = titulo;
+    if (msgEl) msgEl.innerHTML = String(mensaje || '').replace(/\n/g, '<br>');
+
+    modal.style.display = 'flex';
+}
+
+function mostrarConfirmFlotante(titulo, mensaje, onConfirm) {
+    const modal = document.getElementById('modal-alerta-glass');
+    if (!modal) {
+        if (confirm(`${titulo}\n\n${mensaje}`)) {
+            if (onConfirm) onConfirm();
+        }
+        return;
+    }
+    const iconEl = document.getElementById('alerta-glass-icon');
+    const titleEl = document.getElementById('alerta-glass-titulo');
+    const msgEl = document.getElementById('alerta-glass-mensaje');
+    const btnCancel = document.getElementById('alerta-glass-btn-cancelar');
+    const btnAceptar = document.getElementById('alerta-glass-btn-aceptar');
+
+    if (btnCancel) btnCancel.style.display = 'block';
+    if (btnAceptar) {
+        btnAceptar.innerText = 'Confirmar';
+        btnAceptar.className = 'btn-glass btn-glass-primary';
+    }
+    alertaGlassCallback = onConfirm;
+
+    if (iconEl) {
+        iconEl.innerHTML = '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 12px rgba(245,158,11,0.5));"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+    }
+    if (titleEl) titleEl.innerText = titulo;
+    if (msgEl) msgEl.innerHTML = String(mensaje || '').replace(/\n/g, '<br>');
+
+    modal.style.display = 'flex';
+}
+
+function ejecutarAceptarAlertaGlass() {
+    cerrarAlertaGlass();
+    if (typeof alertaGlassCallback === 'function') {
+        const cb = alertaGlassCallback;
+        alertaGlassCallback = null;
+        cb();
+    }
+}
+
+function cerrarAlertaGlass() {
+    const modal = document.getElementById('modal-alerta-glass');
+    if (modal) modal.style.display = 'none';
+    alertaGlassCallback = null;
+}
+
 function mostrarToast(mensaje, tipo = 'info') {
     const container = document.getElementById('toast-container');
     if (!container) return;
     const toast = document.createElement('div');
     toast.className = `glass-toast toast-${tipo}`;
+    const iconSpan = tipo === 'success' 
+        ? '<span>✓</span>' 
+        : tipo === 'error' 
+        ? '<span>✕</span>' 
+        : tipo === 'warning' 
+        ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' 
+        : '<span>ℹ</span>';
     toast.innerHTML = `
-        <span style="font-size:1.1rem;">${tipo === 'success' ? '✓' : tipo === 'error' ? '✕' : 'ℹ'}</span>
-        <span>${mensaje}</span>
+        <span style="font-size:1.1rem; display:inline-flex; align-items:center;">${iconSpan}</span>
+        <span>${String(mensaje || '').replace(/\n/g, '<br>')}</span>
     `;
     container.appendChild(toast);
     setTimeout(() => {
@@ -511,7 +755,7 @@ function recalcularTotales(items) {
 function abrirModalCobro() {
     if (state.carrito.length === 0) return;
     if (!state.sesionCaja || state.sesionCaja.estado !== 'ABIERTA') {
-        alert("Atención: Debe abrir la caja antes de poder emitir facturas.");
+        mostrarToast("Atención: Debe abrir la caja antes de poder emitir facturas.", "warning");
         gestionarCajaModal();
         return;
     }
@@ -610,8 +854,10 @@ async function confirmarVentaFiscal() {
     if (efectivoUsd > 0) pagos.push({ metodo_pago: 'EFECTIVO_USD', moneda: 'USD', monto_original: efectivoUsd });
     if (zelleUsd > 0) pagos.push({ metodo_pago: 'ZELLE', moneda: 'USD', monto_original: zelleUsd });
 
+    const clienteIdFinal = await asegurarClienteSeleccionado();
+
     const payload = {
-        cliente_id: state.clienteSeleccionadoId,
+        cliente_id: clienteIdFinal,
         items: state.carrito.map(it => ({
             producto_id: it.producto_id,
             cantidad: it.cantidad
@@ -628,9 +874,9 @@ async function confirmarVentaFiscal() {
 
         const data = await res.json();
         if (!res.ok) {
-            alert(`Error Fiscal: ${data.mensaje || 'No se pudo procesar la venta'}`);
+            mostrarToast(`Error Fiscal: ${data.mensaje || 'No se pudo procesar la venta'}`, "error");
             btnConfirmar.disabled = false;
-            btnConfirmar.innerText = "🖨️ EMITIR FACTURA FISCAL";
+            btnConfirmar.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; margin-right:6px;"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> EMITIR FACTURA FISCAL`;
             return;
         }
 
@@ -645,9 +891,9 @@ async function confirmarVentaFiscal() {
         cargarCatalogo();
 
     } catch (err) {
-        alert("Error de conexión al emitir factura fiscal");
+        mostrarToast("Error de conexión al emitir factura fiscal", "error");
         btnConfirmar.disabled = false;
-        btnConfirmar.innerText = "🖨️ EMITIR FACTURA FISCAL";
+        btnConfirmar.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; margin-right:6px;"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> EMITIR FACTURA FISCAL`;
     }
 }
 
@@ -665,7 +911,7 @@ function cerrarModalTicket() {
 
 function copiarTicketTexto() {
     navigator.clipboard.writeText(state.ultimoTicket).then(() => {
-        alert("Texto del ticket copiado al portapapeles.");
+        mostrarToast("✓ Texto del ticket copiado al portapapeles.", "info");
     });
 }
 
@@ -678,21 +924,25 @@ async function solicitarReporteX() {
         const data = await res.json();
         mostrarModalTicket(data.reporte);
     } catch (err) {
-        alert("Error al solicitar Reporte X");
+        mostrarToast("Error al solicitar Reporte X", "error");
     }
 }
 
 async function solicitarReporteZ() {
-    if (!confirm("ADVERTENCIA SENIAT: El Cierre Z cerrará el día fiscal de la máquina y generará el bloque de auditoría diario. ¿Desea proceder?")) {
-        return;
-    }
-    try {
-        const res = await fetch('/api/pos/reporte-z', { method: 'POST' });
-        const data = await res.json();
-        mostrarModalTicket(data.reporte);
-    } catch (err) {
-        alert("Error al emitir Cierre Z");
-    }
+    mostrarConfirmFlotante(
+        "Cierre Z Fiscal - SENIAT",
+        "ADVERTENCIA SENIAT: El Cierre Z cerrará definitivamente el día fiscal de la máquina y generará el bloque de auditoría inalterable diario.<br><br>¿Desea proceder?",
+        async () => {
+            try {
+                const res = await fetch('/api/pos/reporte-z', { method: 'POST' });
+                const data = await res.json();
+                mostrarModalTicket(data.reporte);
+                mostrarToast("✓ Cierre Z Fiscal completado", "success");
+            } catch (err) {
+                mostrarToast("Error al emitir Cierre Z", "error");
+            }
+        }
+    );
 }
 
 // ==========================================

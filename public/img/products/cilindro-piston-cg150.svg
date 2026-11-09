@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 150" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#94a3b8"/>
+      <stop offset="100%" stop-color="#475569"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#94a3b8" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+  <rect width="200" height="150" fill="transparent"/>
+  
+  <g transform="translate(55, 15)" filter="url(#glow)">
+    <rect x="15" y="20" width="60" height="70" rx="4" fill="#334155" stroke="#cbd5e1" stroke-width="2"/>
+    <!-- Aletas de refrigeración -->
+    <line x1="5" y1="30" x2="85" y2="30" stroke="#94a3b8" stroke-width="3"/>
+    <line x1="5" y1="42" x2="85" y2="42" stroke="#94a3b8" stroke-width="3"/>
+    <line x1="5" y1="54" x2="85" y2="54" stroke="#94a3b8" stroke-width="3"/>
+    <line x1="5" y1="66" x2="85" y2="66" stroke="#94a3b8" stroke-width="3"/>
+    <line x1="5" y1="78" x2="85" y2="78" stroke="#94a3b8" stroke-width="3"/>
+    <!-- Pistón -->
+    <circle cx="45" cy="54" r="14" fill="#0f172a" stroke="#fbbf24" stroke-width="2"/>
+    <text x="45" y="112" font-family="system-ui, sans-serif" font-size="8" font-weight="900" fill="#ffffff" text-anchor="middle">CILINDRO 150cc</text>
+  </g>
+</svg>

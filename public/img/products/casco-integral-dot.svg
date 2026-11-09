@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 150" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#2563eb"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#38bdf8" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+  <rect width="200" height="150" fill="transparent"/>
+  
+  <g transform="translate(50, 15)" filter="url(#glow)">
+    <!-- Silueta aerodinámica de casco -->
+    <path d="M 20 70 C 15 30 40 10 75 15 C 95 20 100 45 95 70 C 90 90 65 95 30 88 Z" fill="#0f172a" stroke="#38bdf8" stroke-width="3"/>
+    <!-- Visor ahumado -->
+    <path d="M 50 35 C 75 35 90 45 92 65 C 75 68 55 65 40 55 Z" fill="#1e293b" stroke="#60a5fa" stroke-width="2"/>
+    <!-- Sello DOT -->
+    <rect x="22" y="60" width="16" height="10" rx="2" fill="#ef4444"/>
+    <text x="30" y="68" font-family="system-ui, sans-serif" font-size="6" font-weight="900" fill="#ffffff" text-anchor="middle">DOT</text>
+    <text x="55" y="112" font-family="system-ui, sans-serif" font-size="8" font-weight="900" fill="#ffffff" text-anchor="middle">CASCO INTEGRAL</text>
+  </g>
+</svg>

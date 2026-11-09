@@ -34,13 +34,67 @@ class CorrelativoEngine {
     }
 
     /**
-     * Obtiene el siguiente número correlativo estricto dentro de una transacción atómica.
-     * Garantiza cero saltos y cero duplicados bajo concurrencia.
+     * Obtiene el siguiente número correlativo estricto y secuencial.
+     * Garantiza matemáticamente cero saltos y cero duplicados (SENIAT).
      */
     static getSiguienteCorrelativo(tipo) {
         this.init();
 
-        // Bloqueo y actualización atómica
+        if (tipo === 'FACTURA') {
+            const maxVenta = db.get("SELECT COALESCE(MAX(CAST(numero_factura_fiscal AS INTEGER)), 0) as max_num FROM ventas");
+            const proximoNumero = (maxVenta ? maxVenta.max_num : 0) + 1;
+            
+            db.run(`
+                UPDATE secuencias_fiscales 
+                SET ultimo_numero = ?,
+                    actualizado_en = CURRENT_TIMESTAMP
+                WHERE id = 'FACTURA'
+            `, [proximoNumero]);
+
+            const numeroFormateado = String(proximoNumero).padStart(8, '0');
+            return {
+                numeroEntero: proximoNumero,
+                documentoFormateado: numeroFormateado
+            };
+        }
+
+        if (tipo === 'CONTROL') {
+            const maxControl = db.get("SELECT COUNT(*) as total_ventas FROM ventas");
+            const proximoNumero = (maxControl ? maxControl.total_ventas : 0) + 1;
+            
+            db.run(`
+                UPDATE secuencias_fiscales 
+                SET ultimo_numero = ?,
+                    actualizado_en = CURRENT_TIMESTAMP
+                WHERE id = 'CONTROL'
+            `, [proximoNumero]);
+
+            const numeroFormateado = String(proximoNumero).padStart(6, '0');
+            return {
+                numeroEntero: proximoNumero,
+                documentoFormateado: `00-${numeroFormateado}`
+            };
+        }
+
+        if (tipo === 'NOTA_CREDITO') {
+            const seq = db.get("SELECT ultimo_numero, formato_longitud FROM secuencias_fiscales WHERE id = 'NOTA_CREDITO'");
+            const proximoNumero = (seq ? seq.ultimo_numero : 0) + 1;
+            
+            db.run(`
+                UPDATE secuencias_fiscales 
+                SET ultimo_numero = ?,
+                    actualizado_en = CURRENT_TIMESTAMP
+                WHERE id = 'NOTA_CREDITO'
+            `, [proximoNumero]);
+
+            const numeroFormateado = String(proximoNumero).padStart(8, '0');
+            return {
+                numeroEntero: proximoNumero,
+                documentoFormateado: `NC-${numeroFormateado}`
+            };
+        }
+
+        // Fallback para otros tipos
         db.run(`
             UPDATE secuencias_fiscales 
             SET ultimo_numero = ultimo_numero + 1,

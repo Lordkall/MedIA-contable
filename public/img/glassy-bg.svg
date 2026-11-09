@@ -1,87 +1,94 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="100%" height="100%">
   <defs>
-    <!-- Dusk sky gradient -->
-    <linearGradient id="skyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#090d16"/>
-      <stop offset="35%" stop-color="#0f172a"/>
-      <stop offset="65%" stop-color="#1e1b4b"/>
-      <stop offset="85%" stop-color="#2e1065"/>
-      <stop offset="100%" stop-color="#451a03"/>
-    </linearGradient>
-
-    <!-- Warm interior ambient lamp glow -->
-    <radialGradient id="warmLamp" cx="88%" cy="30%" r="50%">
-      <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.25"/>
-      <stop offset="40%" stop-color="#d97706" stop-opacity="0.10"/>
-      <stop offset="100%" stop-color="#0f172a" stop-opacity="0"/>
+    <!-- Deep Dark Blue Radial Atmosphere -->
+    <radialGradient id="skyAtmosphere" cx="50%" cy="30%" r="85%">
+      <stop offset="0%" stop-color="#0b1739"/>
+      <stop offset="35%" stop-color="#070f26"/>
+      <stop offset="70%" stop-color="#040918"/>
+      <stop offset="100%" stop-color="#02050e"/>
     </radialGradient>
 
-    <!-- Cool twilight window glow -->
-    <radialGradient id="coolSky" cx="20%" cy="20%" r="60%">
+    <!-- Top Sapphire Ambient Flare -->
+    <radialGradient id="topSapphireFlare" cx="50%" cy="10%" r="55%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.22"/>
+      <stop offset="25%" stop-color="#2563eb" stop-opacity="0.18"/>
+      <stop offset="55%" stop-color="#1d4ed8" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#02050e" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Left Cyan Ambient Glow -->
+    <radialGradient id="leftCyanGlow" cx="15%" cy="35%" r="45%">
       <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.18"/>
-      <stop offset="50%" stop-color="#3b82f6" stop-opacity="0.08"/>
-      <stop offset="100%" stop-color="#030712" stop-opacity="0"/>
+      <stop offset="30%" stop-color="#0284c7" stop-opacity="0.10"/>
+      <stop offset="65%" stop-color="#0c1938" stop-opacity="0.04"/>
+      <stop offset="100%" stop-color="#02050e" stop-opacity="0"/>
     </radialGradient>
 
-    <!-- Floor perspective gradient -->
-    <linearGradient id="floorGrad" x1="50%" y1="0%" x2="50%" y2="100%">
-      <stop offset="0%" stop-color="#0a0f1d"/>
-      <stop offset="40%" stop-color="#0d1424"/>
-      <stop offset="100%" stop-color="#050811"/>
+    <!-- Right Deep Cobalt Refraction -->
+    <radialGradient id="rightCobaltGlow" cx="85%" cy="45%" r="50%">
+      <stop offset="0%" stop-color="#6366f1" stop-opacity="0.16"/>
+      <stop offset="35%" stop-color="#3b82f6" stop-opacity="0.10"/>
+      <stop offset="70%" stop-color="#1e1b4b" stop-opacity="0.03"/>
+      <stop offset="100%" stop-color="#02050e" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Deep Blue Floor Horizon & Reflection -->
+    <linearGradient id="floorReflection" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#0f1f45" stop-opacity="0.35"/>
+      <stop offset="40%" stop-color="#09132d" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#02050f" stop-opacity="0.98"/>
     </linearGradient>
+
+    <!-- Blur Filters -->
+    <filter id="glassBlurHeavy" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="40"/>
+    </filter>
+    <filter id="glassBlurMedium" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="22"/>
+    </filter>
   </defs>
 
-  <!-- Base Dusk Sky Outside Window -->
-  <rect width="1920" height="1080" fill="url(#skyGrad)"/>
+  <!-- 1. Deep Midnight Base -->
+  <rect width="1920" height="1080" fill="url(#skyAtmosphere)"/>
 
-  <!-- Distant City Skyline Silhouettes -->
-  <g opacity="0.25">
-    <rect x="120" y="480" width="80" height="220" fill="#1e293b"/>
-    <rect x="230" y="420" width="110" height="280" fill="#0f172a"/>
-    <rect x="370" y="450" width="90" height="250" fill="#1e293b"/>
-    <rect x="500" y="520" width="70" height="180" fill="#0f172a"/>
-    <rect x="620" y="390" width="130" height="310" fill="#1e1b4b"/>
-    <rect x="800" y="460" width="100" height="240" fill="#0f172a"/>
-    <rect x="940" y="430" width="85" height="270" fill="#1e293b"/>
-    <rect x="1080" y="500" width="120" height="200" fill="#0f172a"/>
-    <rect x="1240" y="410" width="95" height="290" fill="#1e1b4b"/>
-    <rect x="1380" y="470" width="110" height="230" fill="#0f172a"/>
-    <rect x="1530" y="380" width="140" height="320" fill="#1e293b"/>
-    <rect x="1700" y="490" width="100" height="210" fill="#0f172a"/>
-  </g>
-
-  <!-- Warm lamp & cool sky atmosphere layers -->
-  <rect width="1920" height="1080" fill="url(#coolSky)"/>
-  <rect width="1920" height="1080" fill="url(#warmLamp)"/>
-
-  <!-- Panoramic Floor-to-Ceiling Window Mullions (Architecture) -->
-  <g stroke="#030712" stroke-width="18" opacity="0.75">
-    <!-- Horizontal beams -->
-    <line x1="0" y1="120" x2="1920" y2="120"/>
-    <line x1="0" y1="720" x2="1920" y2="720"/>
-    <!-- Vertical structural pillars -->
-    <line x1="280" y1="0" x2="280" y2="720"/>
-    <line x1="780" y1="0" x2="780" y2="720"/>
-    <line x1="1280" y1="0" x2="1280" y2="720"/>
-    <line x1="1680" y1="0" x2="1680" y2="720"/>
-  </g>
-
-  <!-- Architectural Floor with Warm Reflection -->
-  <path d="M 0 720 L 1920 720 L 1920 1080 L 0 1080 Z" fill="url(#floorGrad)"/>
-  <line x1="0" y1="720" x2="1920" y2="720" stroke="rgba(255,255,255,0.08)" stroke-width="2"/>
-
-  <!-- Soft Lounge / Architectural Silhouette on the left and right -->
+  <!-- 2. High-End Penthouse Architectural Window Grid (Deep Navy Pillars) -->
   <g opacity="0.35">
-    <!-- Left lounge chair silhouette -->
-    <path d="M 60 760 Q 140 700 220 740 L 240 820 Q 180 840 80 820 Z" fill="#020617"/>
-    <!-- Right sofa silhouette -->
-    <path d="M 1650 750 Q 1800 740 1920 770 L 1920 860 L 1630 850 Z" fill="#020617"/>
+    <rect x="0" y="0" width="320" height="880" fill="#060e24"/>
+    <line x1="320" y1="0" x2="320" y2="880" stroke="#172554" stroke-width="2"/>
+    
+    <rect x="320" y="0" width="560" height="880" fill="#081432"/>
+    <line x1="880" y1="0" x2="880" y2="880" stroke="#172554" stroke-width="2"/>
+    
+    <rect x="880" y="0" width="620" height="880" fill="#07112c"/>
+    <line x1="1500" y1="0" x2="1500" y2="880" stroke="#172554" stroke-width="2"/>
+    
+    <rect x="1500" y="0" width="420" height="880" fill="#050d22"/>
+    
+    <!-- Horizontal Crossbars -->
+    <line x1="0" y1="280" x2="1920" y2="280" stroke="#1e3a8a" stroke-width="1.5" opacity="0.4"/>
+    <line x1="0" y1="620" x2="1920" y2="620" stroke="#1e3a8a" stroke-width="1.5" opacity="0.4"/>
   </g>
 
-  <!-- Vignette Overlay -->
-  <radialGradient id="vignette" cx="50%" cy="50%" r="70%">
-    <stop offset="40%" stop-color="transparent"/>
-    <stop offset="100%" stop-color="#020617" stop-opacity="0.85"/>
-  </radialGradient>
-  <rect width="1920" height="1080" fill="url(#vignette)"/>
+  <!-- 3. Ambient Floor Reflection Layer -->
+  <rect y="740" width="1920" height="340" fill="url(#floorReflection)"/>
+  <line x1="0" y1="740" x2="1920" y2="740" stroke="#1d4ed8" stroke-width="1.5" opacity="0.25"/>
+
+  <!-- 4. Subtle Midnight Skyline / Modern Architecture Silhouettes in Distance -->
+  <g fill="#040a1b" opacity="0.6">
+    <rect x="80" y="420" width="120" height="320" rx="3"/>
+    <rect x="230" y="380" width="140" height="360" rx="3"/>
+    <rect x="420" y="480" width="100" height="260" rx="3"/>
+    <rect x="680" y="330" width="160" height="410" rx="4"/>
+    <rect x="1020" y="370" width="130" height="370" rx="3"/>
+    <rect x="1220" y="440" width="110" height="300" rx="3"/>
+    <rect x="1600" y="410" width="150" height="330" rx="4"/>
+  </g>
+
+  <!-- 5. Sapphire, Sky Blue & Indigo Atmospheric Glowing Orbs -->
+  <ellipse cx="960" cy="160" rx="720" ry="320" fill="url(#topSapphireFlare)" filter="url(#glassBlurHeavy)"/>
+  <ellipse cx="260" cy="380" rx="420" ry="360" fill="url(#leftCyanGlow)" filter="url(#glassBlurHeavy)"/>
+  <ellipse cx="1650" cy="460" rx="480" ry="400" fill="url(#rightCobaltGlow)" filter="url(#glassBlurHeavy)"/>
+
+  <!-- Top Subtle LED Ambient Line -->
+  <line x1="200" y1="0" x2="1720" y2="0" stroke="#38bdf8" stroke-width="3" opacity="0.3" filter="url(#glassBlurMedium)"/>
 </svg>

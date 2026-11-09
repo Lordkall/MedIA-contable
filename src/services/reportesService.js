@@ -124,9 +124,32 @@ class ReportesService {
     }
 
     /**
-     * Resumen de Gestión Gerencial y Financiero
+     * Resumen de Gestión Gerencial y Financiero enfocado en Operaciones del Día
      */
     static getResumenGerencial() {
+        const fechaHoy = new Date().toISOString().split('T')[0];
+
+        // 1. Estadísticas Globales del Día de Hoy
+        const statsHoy = db.get(`
+            SELECT 
+                COALESCE(COUNT(*), 0) as total_facturas_hoy,
+                COALESCE(SUM(total_venta_usd), 0) as total_usd_hoy,
+                COALESCE(SUM(total_final_con_igtf_ves), 0) as total_ves_hoy,
+                COALESCE(SUM(monto_igtf_ves), 0) as total_igtf_ves_hoy,
+                COALESCE(AVG(total_venta_usd), 0) as ticket_promedio_usd
+            FROM ventas 
+            WHERE estado = 'PROCESADA' AND fecha = ?
+        `, [fechaHoy]) || { total_facturas_hoy: 0, total_usd_hoy: 0, total_ves_hoy: 0, total_igtf_ves_hoy: 0, ticket_promedio_usd: 0 };
+
+        // Unidades vendidas hoy
+        const unidadesHoy = db.get(`
+            SELECT COALESCE(SUM(vi.cantidad), 0) as total_unidades
+            FROM ventas_items vi
+            JOIN ventas v ON vi.venta_id = v.id
+            WHERE v.estado = 'PROCESADA' AND v.fecha = ?
+        `, [fechaHoy]) || { total_unidades: 0 };
+
+        // 2. Estadísticas Históricas Acumuladas
         const statsVentas = db.get(`
             SELECT 
                 COALESCE(COUNT(*), 0) as total_facturas,
@@ -137,6 +160,7 @@ class ReportesService {
             WHERE estado = 'PROCESADA'
         `);
 
+        // 3. Inventario Valorado
         const statsInventario = db.get(`
             SELECT 
                 COUNT(*) as total_items,
@@ -147,18 +171,98 @@ class ReportesService {
             WHERE activo = 1
         `);
 
-        const desglosesPagos = db.query(`
-            SELECT metodo_pago, moneda, SUM(monto_original) as total_capturado, SUM(monto_equivalente_ves) as total_ves
+        // 4. Medios de Pago Capturados HOY
+        const desglosesPagosHoy = db.query(`
+            SELECT vp.metodo_pago, vp.moneda, SUM(vp.monto_original) as total_capturado, SUM(vp.monto_equivalente_ves) as total_ves, COUNT(vp.id) as transacciones
             FROM ventas_pagos vp
             JOIN ventas v ON vp.venta_id = v.id
-            WHERE v.estado = 'PROCESADA'
-            GROUP BY metodo_pago, moneda
+            WHERE v.estado = 'PROCESADA' AND v.fecha = ?
+            GROUP BY vp.metodo_pago, vp.moneda
+        `, [fechaHoy]);
+
+        // 5. Últimas Ventas / Facturas Realizadas HOY (Feed en Vivo)
+        const ultimasVentasHoy = db.query(`
+            SELECT 
+                v.id,
+                v.numero_factura_fiscal,
+                v.numero_control,
+                v.hora,
+                v.total_final_con_igtf_ves,
+                v.total_venta_usd,
+                v.monto_igtf_ves,
+                v.estado,
+                c.razon_social as cliente_nombre,
+                c.rif_completo as cliente_rif,
+                (
+                    SELECT GROUP_CONCAT(vi.descripcion || ' (x' || CAST(vi.cantidad as INTEGER) || ')', ', ')
+                    FROM ventas_items vi
+                    WHERE vi.venta_id = v.id
+                ) as items_resumen,
+                (
+                    SELECT GROUP_CONCAT(DISTINCT vp.metodo_pago)
+                    FROM ventas_pagos vp
+                    WHERE vp.venta_id = v.id
+                ) as metodos_pago
+            FROM ventas v
+            JOIN clientes c ON v.cliente_id = c.id
+            WHERE v.fecha = ?
+            ORDER BY v.id DESC
+            LIMIT 15
+        `, [fechaHoy]);
+
+        // 6. Top 5 Repuestos de Moto Más Vendidos HOY
+        const topRepuestosHoy = db.query(`
+            SELECT 
+                vi.descripcion,
+                p.imagen_url,
+                p.codigo_barra,
+                SUM(vi.cantidad) as total_cantidad,
+                SUM(vi.subtotal_ves) as total_ves,
+                SUM(vi.cantidad * vi.precio_unitario_usd) as total_usd
+            FROM ventas_items vi
+            JOIN ventas v ON vi.venta_id = v.id
+            LEFT JOIN productos p ON vi.producto_id = p.id
+            WHERE v.estado = 'PROCESADA' AND v.fecha = ?
+            GROUP BY vi.descripcion
+            ORDER BY total_cantidad DESC
+            LIMIT 5
+        `, [fechaHoy]);
+
+        // 7. Repuestos en Alerta de Stock Mínimo
+        const alertasStock = db.query(`
+            SELECT id, codigo_barra, referencia, descripcion, stock_actual, stock_minimo, precio_usd, imagen_url
+            FROM productos
+            WHERE activo = 1 AND stock_actual <= stock_minimo
+            ORDER BY (stock_actual - stock_minimo) ASC
+            LIMIT 8
         `);
 
+        // 8. Distribución Semanal de Ventas (Últimos 7 días)
+        const diasSemana = db.query(`
+            SELECT fecha, SUM(total_final_con_igtf_ves) as total_ves, SUM(total_venta_usd) as total_usd, COUNT(*) as facturas
+            FROM ventas
+            WHERE estado = 'PROCESADA' AND fecha >= date(?, '-6 days')
+            GROUP BY fecha
+            ORDER BY fecha ASC
+        `, [fechaHoy]);
+
         return {
+            fechaHoy,
+            hoy: {
+                total_facturas: statsHoy.total_facturas_hoy,
+                total_usd: statsHoy.total_usd_hoy,
+                total_ves: statsHoy.total_ves_hoy,
+                total_igtf_ves: statsHoy.total_igtf_ves_hoy,
+                ticket_promedio_usd: statsHoy.ticket_promedio_usd,
+                unidades_vendidas: unidadesHoy.total_unidades
+            },
             ventas: statsVentas,
             inventario: statsInventario,
-            mediosDePago: desglosesPagos
+            mediosDePagoHoy: desglosesPagosHoy,
+            ultimasVentasHoy,
+            topRepuestosHoy,
+            alertasStock,
+            diasSemana
         };
     }
 

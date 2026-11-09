@@ -10,16 +10,100 @@ function mostrarToast(mensaje, tipo = 'info') {
     if (!container) return;
     const toast = document.createElement('div');
     toast.className = `glass-toast toast-${tipo}`;
+    const textoFormateado = String(mensaje || '').replace(/\n/g, '<br>');
     toast.innerHTML = `
-        <span style="font-size:1.1rem;">${tipo === 'success' ? '✓' : tipo === 'error' ? '✕' : 'ℹ'}</span>
-        <span>${mensaje}</span>
+        <span style="font-size:1.1rem; flex-shrink:0;">${tipo === 'success' ? '✓' : tipo === 'error' ? '✕' : 'ℹ'}</span>
+        <div style="flex:1;">${textoFormateado}</div>
     `;
     container.appendChild(toast);
     setTimeout(() => {
         toast.style.opacity = '0';
         toast.style.transform = 'translateX(40px)';
         setTimeout(() => toast.remove(), 300);
-    }, 3200);
+    }, 3800);
+}
+
+let alertaGlassCallback = null;
+
+function mostrarAlertaFlotante(titulo, mensaje, tipo = 'success') {
+    const modal = document.getElementById('modal-alerta-glass');
+    if (!modal) {
+        mostrarToast(`${titulo}: ${mensaje}`, tipo);
+        return;
+    }
+    const iconEl = document.getElementById('alerta-glass-icon');
+    const titleEl = document.getElementById('alerta-glass-titulo');
+    const msgEl = document.getElementById('alerta-glass-mensaje');
+    const btnCancel = document.getElementById('alerta-glass-btn-cancelar');
+    const btnAceptar = document.getElementById('alerta-glass-btn-aceptar');
+
+    if (btnCancel) btnCancel.style.display = 'none';
+    if (btnAceptar) {
+        btnAceptar.innerText = 'Aceptar';
+        btnAceptar.className = 'btn-glass btn-glass-primary';
+    }
+    alertaGlassCallback = null;
+
+    if (iconEl) {
+        if (tipo === 'success') {
+            iconEl.innerHTML = '<span style="color:#86efac; filter:drop-shadow(0 0 12px rgba(16,185,129,0.5));">✓</span>';
+        } else if (tipo === 'error') {
+            iconEl.innerHTML = '<span style="color:#f87171; filter:drop-shadow(0 0 12px rgba(239,68,68,0.5));">✕</span>';
+        } else if (tipo === 'warning') {
+            iconEl.innerHTML = '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 12px rgba(245,158,11,0.5));"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+        } else {
+            iconEl.innerHTML = '<span style="color:#93c5fd; filter:drop-shadow(0 0 12px rgba(59,130,246,0.5));">ℹ</span>';
+        }
+    }
+    if (titleEl) titleEl.innerText = titulo;
+    if (msgEl) msgEl.innerHTML = String(mensaje || '').replace(/\n/g, '<br>');
+
+    modal.style.display = 'flex';
+}
+
+function mostrarConfirmFlotante(titulo, mensaje, onConfirm) {
+    const modal = document.getElementById('modal-alerta-glass');
+    if (!modal) {
+        if (confirm(`${titulo}\n\n${mensaje}`)) {
+            if (onConfirm) onConfirm();
+        }
+        return;
+    }
+    const iconEl = document.getElementById('alerta-glass-icon');
+    const titleEl = document.getElementById('alerta-glass-titulo');
+    const msgEl = document.getElementById('alerta-glass-mensaje');
+    const btnCancel = document.getElementById('alerta-glass-btn-cancelar');
+    const btnAceptar = document.getElementById('alerta-glass-btn-aceptar');
+
+    if (btnCancel) btnCancel.style.display = 'block';
+    if (btnAceptar) {
+        btnAceptar.innerText = 'Confirmar';
+        btnAceptar.className = 'btn-glass btn-glass-primary';
+    }
+    alertaGlassCallback = onConfirm;
+
+    if (iconEl) {
+        iconEl.innerHTML = '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 12px rgba(245,158,11,0.5));"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+    }
+    if (titleEl) titleEl.innerText = titulo;
+    if (msgEl) msgEl.innerHTML = String(mensaje || '').replace(/\n/g, '<br>');
+
+    modal.style.display = 'flex';
+}
+
+function ejecutarAceptarAlertaGlass() {
+    cerrarAlertaGlass();
+    if (typeof alertaGlassCallback === 'function') {
+        const cb = alertaGlassCallback;
+        alertaGlassCallback = null;
+        cb();
+    }
+}
+
+function cerrarAlertaGlass() {
+    const modal = document.getElementById('modal-alerta-glass');
+    if (modal) modal.style.display = 'none';
+    alertaGlassCallback = null;
 }
 
 let adminState = {
@@ -84,6 +168,18 @@ async function cargarConfiguracionGeneral() {
         const confSerial = document.getElementById('config-serial-fiscal');
         if (confSerial) confSerial.value = conf.serial_impresora_fiscal;
 
+        const confModalidad = document.getElementById('config-modalidad-emision');
+        if (confModalidad && conf.modalidad_emision) confModalidad.value = conf.modalidad_emision;
+
+        const confToken = document.getElementById('config-unidigital-token');
+        if (confToken && conf.unidigital_token) confToken.value = conf.unidigital_token;
+
+        const confUrl = document.getElementById('config-unidigital-url');
+        if (confUrl && conf.unidigital_url) confUrl.value = conf.unidigital_url;
+
+        const confAmbiente = document.getElementById('config-unidigital-ambiente');
+        if (confAmbiente && conf.unidigital_ambiente) confAmbiente.value = conf.unidigital_ambiente;
+
         // Estado de Caja
         const resCaja = await fetch('/api/pos/sesion');
         const sesion = await resCaja.json();
@@ -105,46 +201,283 @@ async function cargarKPIs() {
     try {
         const res = await fetch('/api/reportes/gerencial');
         const ger = await res.json();
-        const kpiCosto = document.getElementById('kpi-valor-costo');
-        if (kpiCosto) kpiCosto.innerText = `$ ${ger.inventario.valor_costo_usd.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
-        const kpiVenta = document.getElementById('kpi-valor-venta');
-        if (kpiVenta) kpiVenta.innerText = `$ ${ger.inventario.valor_venta_usd.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
-        const kpiTotVes = document.getElementById('kpi-total-ventas');
-        if (kpiTotVes) kpiTotVes.innerText = `Bs. ${ger.ventas.total_ves.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
-        const kpiTotUsd = document.getElementById('kpi-total-ventas-usd');
-        if (kpiTotUsd) kpiTotUsd.innerText = `$ ${ger.ventas.total_usd.toFixed(2)}`;
-        const kpiIgtf = document.getElementById('kpi-total-igtf');
-        if (kpiIgtf) kpiIgtf.innerText = `Bs. ${ger.ventas.total_igtf_ves.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
 
-        // Desglose de Medios de Pago en Dashboard
-        const mediosContainer = document.getElementById('dashboard-medios-pago-list');
-        if (mediosContainer && ger.mediosDePago) {
-            if (ger.mediosDePago.length === 0) {
-                mediosContainer.innerHTML = `<div style="font-size:0.85rem; color:var(--text-muted); text-align:center; padding:15px;">Aún no hay cobros procesados</div>`;
+        // 1. Fecha formateada en español
+        const fechaEl = document.getElementById('dashboard-fecha-label');
+        if (fechaEl && ger.fechaHoy) {
+            const fParts = ger.fechaHoy.split('-');
+            const dateObj = new Date(parseInt(fParts[0]), parseInt(fParts[1]) - 1, parseInt(fParts[2]));
+            const fechaStr = dateObj.toLocaleDateString('es-VE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            fechaEl.innerText = `${fechaStr.charAt(0).toUpperCase() + fechaStr.slice(1)} | Resumen de ventas de repuestos, mostrador y flujo de caja en tiempo real.`;
+        }
+
+        // 2. Métricas Operativas del Día de Hoy
+        const kpiHoyVes = document.getElementById('kpi-hoy-ventas-ves');
+        if (kpiHoyVes && ger.hoy) kpiHoyVes.innerText = `Bs. ${ger.hoy.total_ves.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+        
+        const kpiHoyUsd = document.getElementById('kpi-hoy-ventas-usd');
+        if (kpiHoyUsd && ger.hoy) kpiHoyUsd.innerText = `$ ${ger.hoy.total_usd.toFixed(2)}`;
+
+        const kpiHoyCount = document.getElementById('kpi-hoy-facturas-count');
+        if (kpiHoyCount && ger.hoy) kpiHoyCount.innerText = `${ger.hoy.total_facturas} ${ger.hoy.total_facturas === 1 ? 'venta' : 'ventas'}`;
+
+        const badgeTotTickets = document.getElementById('badge-total-tickets-hoy');
+        if (badgeTotTickets && ger.hoy) badgeTotTickets.innerText = `${ger.hoy.total_facturas} ${ger.hoy.total_facturas === 1 ? 'Factura Hoy' : 'Facturas Hoy'}`;
+
+        const kpiTicketProm = document.getElementById('kpi-hoy-ticket-promedio');
+        if (kpiTicketProm && ger.hoy) kpiTicketProm.innerText = `$ ${ger.hoy.ticket_promedio_usd.toFixed(2)}`;
+
+        const kpiUnidades = document.getElementById('kpi-hoy-unidades-count');
+        if (kpiUnidades && ger.hoy) kpiUnidades.innerText = `${ger.hoy.unidades_vendidas} repuestos despachados hoy`;
+
+        const kpiHoyIgtf = document.getElementById('kpi-hoy-igtf');
+        if (kpiHoyIgtf && ger.hoy) kpiHoyIgtf.innerText = `Bs. ${ger.hoy.total_igtf_ves.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+
+        // 3. Inventario Valorado de Repuestos
+        const kpiCosto = document.getElementById('kpi-valor-costo');
+        if (kpiCosto && ger.inventario) kpiCosto.innerText = `$ ${ger.inventario.valor_costo_usd.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+
+        const kpiVenta = document.getElementById('kpi-valor-venta');
+        if (kpiVenta && ger.inventario) kpiVenta.innerText = `$ ${ger.inventario.valor_venta_usd.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+
+        // 4. Tabla de Ventas y Facturas Realizadas HOY
+        const tbodyVentasHoy = document.getElementById('dashboard-ventas-hoy-body');
+        if (tbodyVentasHoy) {
+            if (!ger.ultimasVentasHoy || ger.ultimasVentasHoy.length === 0) {
+                tbodyVentasHoy.innerHTML = `
+                    <tr>
+                        <td colspan="8" style="text-align:center; padding:35px; color:#94a3b8;">
+                            <div style="margin-bottom:10px; display:flex; justify-content:center;">
+                                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="5" cy="16" r="3.2"/>
+                                    <circle cx="19" cy="16" r="3.2"/>
+                                    <path d="M5 16l4-7h4.5l2 4h3.5"/>
+                                    <path d="M13.5 9l2-4h2.5"/>
+                                    <line x1="9" y1="16" x2="16" y2="16"/>
+                                </svg>
+                            </div>
+                            Aún no se han emitido facturas hoy. Las ventas procesadas en el mostrador aparecerán aquí en vivo.
+                        </td>
+                    </tr>
+                `;
             } else {
-                mediosContainer.innerHTML = ger.mediosDePago.map(m => `
-                    <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); padding:10px 14px; border-radius:10px; display:flex; justify-content:space-between; align-items:center;">
-                        <div>
-                            <strong style="display:block; font-size:0.85rem;">${m.metodo_pago.replace('_', ' ')}</strong>
-                            <small style="color:var(--text-muted);">${m.moneda === 'USD' ? 'Divisa' : 'Moneda Nacional'}</small>
+                tbodyVentasHoy.innerHTML = ger.ultimasVentasHoy.map(v => {
+                    let pagoBadge = '';
+                    const met = (v.metodos_pago || '').toUpperCase();
+                    if (met.includes('USD') || met.includes('DIVISA') || met.includes('ZELLE')) {
+                        pagoBadge = `<span style="background:rgba(251,191,36,0.12); color:#fbbf24; border:1px solid rgba(251,191,36,0.3); padding:3px 7px; border-radius:5px; font-size:0.72rem; font-weight:700; display:inline-flex; align-items:center; gap:5px;">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M15 9.5a2.5 2.5 0 0 0-5 0c0 1.5 1 2 2.5 2s2.5.5 2.5 2a2.5 2.5 0 0 1-5 0"/></svg>
+                            <span>Divisas $</span>
+                        </span>`;
+                    } else if (met.includes('MOVIL')) {
+                        pagoBadge = `<span style="background:rgba(168,85,247,0.12); color:#c084fc; border:1px solid rgba(168,85,247,0.3); padding:3px 7px; border-radius:5px; font-size:0.72rem; font-weight:700; display:inline-flex; align-items:center; gap:5px;">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+                            <span>Pago Móvil</span>
+                        </span>`;
+                    } else {
+                        pagoBadge = `<span style="background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:3px 7px; border-radius:5px; font-size:0.72rem; font-weight:700; display:inline-flex; align-items:center; gap:5px;">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                            <span>Débito</span>
+                        </span>`;
+                    }
+
+                    return `
+                        <tr>
+                            <td>
+                                <strong style="color:#ffffff; font-family:monospace; font-size:0.88rem;">${v.numero_factura_fiscal}</strong>
+                                <div style="font-size:0.7rem; color:#64748b;">${v.numero_control || '00-000000'}</div>
+                            </td>
+                            <td>
+                                <span style="color:#93c5fd; font-weight:600; font-size:0.82rem;">${(v.hora || '').substring(0, 5)}</span>
+                            </td>
+                            <td>
+                                <strong style="display:block; font-size:0.83rem; color:#e2e8f0; max-width:140px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${v.cliente_nombre}</strong>
+                                <small style="color:#64748b; font-size:0.72rem;">${v.cliente_rif}</small>
+                            </td>
+                            <td style="max-width:190px;">
+                                <div style="font-size:0.78rem; color:#cbd5e1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${v.items_resumen || ''}">
+                                    ${v.items_resumen || 'Repuestos'}
+                                </div>
+                            </td>
+                            <td>
+                                <strong style="color:#86efac; font-size:0.88rem;">Bs. ${v.total_final_con_igtf_ves.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}</strong>
+                            </td>
+                            <td>
+                                <span style="color:#93c5fd; font-weight:700; font-size:0.85rem;">$ ${v.total_venta_usd.toFixed(2)}</span>
+                            </td>
+                            <td>${pagoBadge}</td>
+                            <td style="text-align:center;">
+                                <button onclick="verTicketFiscalAdmin(${v.id})" class="btn-glass" style="padding:4px 10px; font-size:0.74rem; font-weight:700; display:inline-flex; align-items:center; gap:4px;" title="Ver ticket fiscal emitido">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                    <span>Ticket</span>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+        }
+
+        // 5. Desglose de Medios de Pago en Caja (Hoy)
+        const mediosContainer = document.getElementById('dashboard-medios-pago-hoy');
+        if (mediosContainer && ger.mediosDePagoHoy) {
+            if (ger.mediosDePagoHoy.length === 0) {
+                mediosContainer.innerHTML = `<div style="font-size:0.8rem; color:#94a3b8; text-align:center; padding:12px;">Sin cobros en el turno actual</div>`;
+            } else {
+                mediosContainer.innerHTML = ger.mediosDePagoHoy.map(m => {
+                    const isUsd = m.moneda === 'USD' || m.metodo_pago.includes('DIVISAS') || m.metodo_pago.includes('USD');
+                    const isMovil = m.metodo_pago.includes('MOVIL');
+                    
+                    const iconSvg = isUsd
+                        ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M15 9.5a2.5 2.5 0 0 0-5 0c0 1.5 1 2 2.5 2s2.5.5 2.5 2a2.5 2.5 0 0 1-5 0"/></svg>`
+                        : isMovil
+                        ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c084fc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>`
+                        : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>`;
+                    
+                    const iconBg = isUsd
+                        ? `background:rgba(251,191,36,0.12); border:1px solid rgba(251,191,36,0.25);`
+                        : isMovil
+                        ? `background:rgba(168,85,247,0.12); border:1px solid rgba(168,85,247,0.25);`
+                        : `background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.25);`;
+
+                    return `
+                        <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); padding:8px 12px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <div style="width:30px; height:30px; border-radius:8px; ${iconBg} display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                    ${iconSvg}
+                                </div>
+                                <div>
+                                    <strong style="display:block; font-size:0.82rem; color:#f1f5f9;">${m.metodo_pago.replace(/_/g, ' ')}</strong>
+                                    <small style="color:#64748b; font-size:0.72rem;">${m.transacciones} ${m.transacciones === 1 ? 'cobro' : 'cobros'}</small>
+                                </div>
+                            </div>
+                            <div style="text-align:right;">
+                                <strong style="color:#86efac; font-size:0.88rem;">Bs. ${m.total_ves.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}</strong>
+                                ${isUsd ? `<div style="font-size:0.74rem; color:#93c5fd; font-weight:700;">$ ${m.total_capturado.toFixed(2)}</div>` : ''}
+                            </div>
                         </div>
-                        <div style="text-align:right;">
-                            <strong style="color:#86efac; font-size:0.95rem;">Bs. ${m.total_ves.toLocaleString('es-VE', {minimumFractionDigits:2})}</strong>
-                            <div style="font-size:0.75rem; color:#93c5fd;">${m.moneda === 'USD' ? `$ ${m.total_capturado.toFixed(2)}` : ''}</div>
+                    `;
+                }).join('');
+            }
+        }
+
+        // 6. Top Repuestos Más Vendidos Hoy
+        const topContainer = document.getElementById('dashboard-top-repuestos-hoy');
+        if (topContainer && ger.topRepuestosHoy) {
+            if (ger.topRepuestosHoy.length === 0) {
+                topContainer.innerHTML = `<div style="font-size:0.8rem; color:#94a3b8; text-align:center; padding:12px;">Sin ventas de repuestos hoy</div>`;
+            } else {
+                topContainer.innerHTML = ger.topRepuestosHoy.map((p, idx) => `
+                    <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); padding:8px 10px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                        <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+                            <span style="font-size:0.72rem; font-weight:800; color:#38bdf8; background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.25); width:20px; height:20px; border-radius:6px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">${idx+1}</span>
+                            <div style="width:32px; height:32px; border-radius:8px; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0; padding:3px;">
+                                <img src="${p.imagen_url || '/img/products/placeholder.svg'}" onerror="this.onerror=null; this.src='/img/products/placeholder.svg';" style="width:100%; height:100%; object-fit:contain;" alt="repuesto">
+                            </div>
+                            <span style="font-size:0.78rem; color:#e2e8f0; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.descripcion}</span>
+                        </div>
+                        <div style="text-align:right; flex-shrink:0;">
+                            <span style="font-size:0.78rem; font-weight:800; color:#86efac;">${p.total_cantidad} unid.</span>
+                            <div style="font-size:0.72rem; color:#93c5fd;">$ ${p.total_usd.toFixed(2)}</div>
                         </div>
                     </div>
                 `).join('');
             }
         }
+
+        // 7. Alertas de Stock Crítico
+        const alertContainer = document.getElementById('dashboard-alertas-stock');
+        const alertBadge = document.getElementById('badge-alertas-count');
+        if (alertContainer && ger.alertasStock) {
+            if (alertBadge) alertBadge.innerText = ger.alertasStock.length;
+            if (ger.alertasStock.length === 0) {
+                alertContainer.innerHTML = `<div style="font-size:0.8rem; color:#86efac; text-align:center; padding:10px;">✓ Todo el inventario está en niveles óptimos</div>`;
+            } else {
+                alertContainer.innerHTML = ger.alertasStock.slice(0, 4).map(a => `
+                    <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.25); padding:6px 10px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; font-size:0.78rem;">
+                        <div style="min-width:0; padding-right:6px;">
+                            <strong style="color:#ffffff; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${a.descripcion}</strong>
+                            <small style="color:#fca5a5;">Mín: ${a.stock_minimo} | Ref: ${a.referencia || '--'}</small>
+                        </div>
+                        <span style="background:#ef4444; color:#ffffff; font-weight:800; font-size:0.72rem; padding:2px 7px; border-radius:4px; flex-shrink:0;">
+                            ${a.stock_actual} disp
+                        </span>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // 8. Gráfica de Barras de la Semana
+        const barsContainer = document.getElementById('dashboard-semanal-bars');
+        if (barsContainer) {
+            const diasNombres = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'];
+            const dataDias = ger.diasSemana || [];
+            
+            // Construir los últimos 7 días
+            let maxMonto = 1;
+            dataDias.forEach(d => { if (d.total_usd > maxMonto) maxMonto = d.total_usd; });
+
+            let barsHtml = '';
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                const fStr = d.toISOString().split('T')[0];
+                const match = dataDias.find(item => item.fecha === fStr);
+                const montoUsd = match ? match.total_usd : 0;
+                const pct = Math.max(12, Math.round((montoUsd / (maxMonto * 1.15)) * 100));
+                const diaSem = diasNombres[d.getDay()];
+
+                barsHtml += `
+                    <div class="mock-bar" style="height: ${pct}%;" title="${fStr}: $ ${montoUsd.toFixed(2)}">
+                        <span class="mock-bar-label">${diaSem}</span>
+                    </div>
+                `;
+            }
+            barsContainer.innerHTML = barsHtml;
+        }
+
     } catch (err) {
-        console.error("Error al cargar KPIs", err);
+        console.error("Error al cargar KPIs del día", err);
+    }
+}
+
+let adminUltimoTicketTexto = '';
+
+async function verTicketFiscalAdmin(ventaId) {
+    try {
+        const res = await fetch(`/api/pos/ticket/${ventaId}`);
+        const data = await res.json();
+        if (res.ok && data.ticket) {
+            adminUltimoTicketTexto = data.ticket;
+            const container = document.getElementById('admin-ticket-preview-content');
+            if (container) container.innerText = data.ticket;
+            const modal = document.getElementById('modal-ticket-fiscal');
+            if (modal) modal.style.display = 'flex';
+        } else {
+            mostrarToast("No se pudo obtener el ticket fiscal.", "error");
+        }
+    } catch (e) {
+        mostrarToast("Error de conexión al cargar ticket", "error");
+    }
+}
+
+function cerrarModalTicketAdmin() {
+    const modal = document.getElementById('modal-ticket-fiscal');
+    if (modal) modal.style.display = 'none';
+}
+
+function copiarTicketAdminTexto() {
+    if (adminUltimoTicketTexto) {
+        navigator.clipboard.writeText(adminUltimoTicketTexto).then(() => {
+            mostrarToast("✓ Ticket fiscal copiado al portapapeles.", "success");
+        });
     }
 }
 
 async function guardarTasaBCV() {
     const val = parseFloat(document.getElementById('config-tasa-bcv').value);
     if (isNaN(val) || val <= 0) {
-        alert("Ingrese una tasa válida.");
+        mostrarToast("Ingrese una tasa numérica válida.", "error");
         return;
     }
 
@@ -155,15 +488,15 @@ async function guardarTasaBCV() {
             body: JSON.stringify({ tasa: val })
         });
         if (res.ok) {
-            alert("Tasa oficial BCV guardada exitosamente.");
+            mostrarToast("✓ Tasa oficial BCV guardada exitosamente.", "success");
             await cargarConfiguracionGeneral();
             await cargarInventario();
             await cargarKPIs();
         } else {
-            alert("Error al guardar la tasa.");
+            mostrarToast("Error al guardar la tasa oficial.", "error");
         }
     } catch (err) {
-        alert("Error de conexión");
+        mostrarToast("Error de conexión con el servidor.", "error");
     }
 }
 
@@ -217,6 +550,82 @@ async function sincronizarBCVAuto(btnEl) {
 }
 
 // ==========================================
+// INTEGRACIÓN UNIDIGITAL (FACTURACIÓN DIGITAL SENIAT)
+// ==========================================
+async function guardarConfiguracionUnidigital() {
+    const modalidad = document.getElementById('config-modalidad-emision')?.value || 'LOCAL';
+    const token = document.getElementById('config-unidigital-token')?.value?.trim() || '';
+    const url = document.getElementById('config-unidigital-url')?.value?.trim() || 'https://api-sandbox.unidigital.com.ve/v1';
+    const ambiente = document.getElementById('config-unidigital-ambiente')?.value || 'SANDBOX';
+
+    try {
+        const res = await fetch('/api/configuracion', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                modalidad_emision: modalidad,
+                unidigital_token: token,
+                unidigital_url: url,
+                unidigital_ambiente: ambiente
+            })
+        });
+
+        if (res.ok) {
+            mostrarToast("✓ Configuración de Facturación Digital guardada exitosamente", "success");
+            const pill = document.getElementById('unidigital-status-pill');
+            if (pill) {
+                if (modalidad === 'UNIDIGITAL') {
+                    pill.innerText = `Activo (${ambiente})`;
+                    pill.style.background = 'rgba(16, 185, 129, 0.2)';
+                    pill.style.color = '#86efac';
+                    pill.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+                } else {
+                    pill.innerText = 'Modo Local';
+                    pill.style.background = 'rgba(59, 130, 246, 0.2)';
+                    pill.style.color = '#93c5fd';
+                    pill.style.borderColor = 'rgba(59, 130, 246, 0.4)';
+                }
+            }
+        } else {
+            mostrarToast("Error al guardar la configuración", "error");
+        }
+    } catch (e) {
+        mostrarToast("Error de conexión al guardar configuración", "error");
+    }
+}
+
+async function probarConexionUnidigital() {
+    const token = document.getElementById('config-unidigital-token')?.value?.trim();
+    const url = document.getElementById('config-unidigital-url')?.value?.trim();
+
+    mostrarToast("Verificando conexión con Unidigital...", "info");
+
+    try {
+        const res = await fetch('/api/unidigital/probar-conexion', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token, url })
+        });
+        const data = await res.json();
+
+        if (data.exito) {
+            mostrarToast(`✓ ${data.mensaje}`, "success");
+            const pill = document.getElementById('unidigital-status-pill');
+            if (pill) {
+                pill.innerText = data.simulado ? 'Sandbox Conectado' : 'Conectado SENIAT';
+                pill.style.background = 'rgba(16, 185, 129, 0.2)';
+                pill.style.color = '#86efac';
+                pill.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+            }
+        } else {
+            mostrarToast(`✕ ${data.mensaje}`, "error");
+        }
+    } catch (e) {
+        mostrarToast("Error al conectar con el servidor local", "error");
+    }
+}
+
+// ==========================================
 // INVENTARIO & KÁRDEX
 // ==========================================
 async function cargarCategorias() {
@@ -265,7 +674,7 @@ function renderizarTablaInventario(items) {
                 <td><code>${p.codigo_barra}</code></td>
                 <td>
                     <div style="display:flex; align-items:center; gap:10px;">
-                        <div style="width:38px; height:38px; border-radius:8px; background:rgba(0,0,0,0.4); border:1px solid var(--glass-border); display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0;">
+                        <div style="width:38px; height:38px; border-radius:8px; background:rgba(255,255,255,0.04); border:1px solid var(--glass-border); display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0;">
                             <img src="${imgUrl}" alt="${p.descripcion}" style="width:100%; height:100%; object-fit:contain; padding:2px;" onerror="this.onerror=null; this.src='/img/products/placeholder.svg';">
                         </div>
                         <strong>${p.descripcion}</strong>
@@ -294,11 +703,45 @@ function renderizarTablaInventario(items) {
     }).join('');
 }
 
+let fotoProductoBase64 = null;
+
+function alSeleccionarFotoProducto(input) {
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        fotoProductoBase64 = e.target.result;
+        const prompt = document.getElementById('prod-upload-prompt');
+        const preview = document.getElementById('prod-preview-wrapper');
+        const img = document.getElementById('prod-preview-img');
+        const label = document.getElementById('prod-file-label');
+        if (img) img.src = fotoProductoBase64;
+        if (label) label.innerText = file.name;
+        if (prompt) prompt.style.display = 'none';
+        if (preview) preview.style.display = 'flex';
+    };
+    reader.readAsDataURL(file);
+}
+
+function descartarFotoProducto() {
+    fotoProductoBase64 = null;
+    const fileInput = document.getElementById('prod-form-file');
+    if (fileInput) fileInput.value = '';
+    const prompt = document.getElementById('prod-upload-prompt');
+    const preview = document.getElementById('prod-preview-wrapper');
+    const img = document.getElementById('prod-preview-img');
+    if (img) img.src = '';
+    if (prompt) prompt.style.display = 'flex';
+    if (preview) preview.style.display = 'none';
+}
+
 function abrirModalNuevoProducto() {
+    descartarFotoProducto();
     document.getElementById('modal-producto').style.display = 'flex';
 }
 
 function cerrarModalProducto() {
+    descartarFotoProducto();
     document.getElementById('modal-producto').style.display = 'none';
 }
 
@@ -307,7 +750,6 @@ async function guardarProductoNuevo() {
     const desc = document.getElementById('prod-form-desc').value.trim();
     const cat = document.getElementById('prod-form-cat').value;
     const iva = document.getElementById('prod-form-iva').value;
-    const imgUrl = document.getElementById('prod-form-img') ? document.getElementById('prod-form-img').value.trim() : '';
     const costo = parseFloat(document.getElementById('prod-form-costo').value) || 0;
     const precio = parseFloat(document.getElementById('prod-form-precio').value) || 0;
     const stock = parseFloat(document.getElementById('prod-form-stock').value) || 0;
@@ -316,6 +758,24 @@ async function guardarProductoNuevo() {
     if (!barcode || !desc) {
         mostrarToast("Código de barras y descripción son obligatorios.", 'error');
         return;
+    }
+
+    let imgFinalUrl = '';
+    if (fotoProductoBase64) {
+        try {
+            mostrarToast("Subiendo imagen del producto...", 'info');
+            const upRes = await fetch('/api/inventario/upload-imagen', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ data: fotoProductoBase64 })
+            });
+            const upData = await upRes.json();
+            if (upData && upData.url) {
+                imgFinalUrl = upData.url;
+            }
+        } catch (e) {
+            console.error("Error al subir foto:", e);
+        }
     }
 
     try {
@@ -331,7 +791,7 @@ async function guardarProductoNuevo() {
                 precio_usd: precio,
                 stock_actual: stock,
                 stock_minimo: stockMin,
-                imagen_url: imgUrl
+                imagen_url: imgFinalUrl
             })
         });
 
@@ -609,7 +1069,7 @@ async function guardarCompra() {
     const numControl = document.getElementById('compra-form-control').value.trim();
 
     if (!numFactura) {
-        alert("El número de factura del proveedor es obligatorio para el Libro de Compras.");
+        mostrarToast("El número de factura del proveedor es obligatorio para el Libro de Compras.", "warning");
         return;
     }
 
@@ -625,7 +1085,7 @@ async function guardarCompra() {
     });
 
     if (items.length === 0) {
-        alert("Debe agregar al menos un producto a la compra.");
+        mostrarToast("Debe agregar al menos un producto a la compra.", "warning");
         return;
     }
 
@@ -644,16 +1104,20 @@ async function guardarCompra() {
 
         const d = await res.json();
         if (res.ok) {
-            alert(`Compra registrada exitosamente.\nInventario actualizado.\nComprobante de Retención IVA SENIAT: ${d.comprobanteRetencionIva || 'No aplicable'}`);
+            mostrarAlertaFlotante(
+                "Compra Registrada Exitosamente",
+                `Inventario actualizado en tiempo real.<br>Comprobante de Retención IVA SENIAT: <strong>${d.comprobanteRetencionIva || 'No aplicable'}</strong>`,
+                "success"
+            );
             cerrarModalCompra();
             cargarCompras();
             cargarInventario();
             cargarKPIs();
         } else {
-            alert(`Error: ${d.mensaje}`);
+            mostrarToast(`Error: ${d.mensaje}`, "error");
         }
     } catch (err) {
-        alert("Error de conexión al registrar compra");
+        mostrarToast("Error de conexión al registrar compra", "error");
     }
 }
 
@@ -706,7 +1170,7 @@ async function guardarCliente() {
     const tipoTrib = document.getElementById('cli-tipo-trib').value;
 
     if (!num || !nombre) {
-        alert("Cédula/RIF y Razón Social son requeridos.");
+        mostrarToast("Cédula/RIF y Razón Social son requeridos.", "warning");
         return;
     }
 
@@ -727,14 +1191,18 @@ async function guardarCliente() {
 
         const d = await res.json();
         if (res.ok) {
-            alert("Cliente validado ante algoritmo SENIAT y registrado.");
+            mostrarAlertaFlotante(
+                "Cliente Registrado",
+                "Cliente validado ante algoritmo SENIAT y registrado exitosamente.",
+                "success"
+            );
             cerrarModalCliente();
             cargarClientesYProveedores();
         } else {
-            alert(`Error de Validación: ${d.mensaje}`);
+            mostrarToast(`Error de Validación: ${d.mensaje}`, "error");
         }
     } catch (err) {
-        alert("Error de conexión");
+        mostrarToast("Error de conexión", "error");
     }
 }
 
@@ -807,8 +1275,9 @@ function renderizarLibroVentas(data) {
         <div style="background:#0f172a; border:1px solid var(--border-color); border-radius:8px; padding:16px; margin-bottom:16px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                 <h4 style="color:#60a5fa;">LIBRO DE VENTAS FISCAL (Cumplimiento Art. 76 al 78 Reglamento IVA y Providencia 000013)</h4>
-                <span style="font-size:0.8rem; color:#86efac; border:1px solid #16a34a; padding:2px 8px; border-radius:4px;">
-                    🛡️ Registros Inalterables (Bloqueo Activo)
+                <span style="font-size:0.8rem; color:#86efac; border:1px solid #16a34a; padding:2px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:5px;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    <span>Registros Inalterables (Bloqueo Activo)</span>
                 </span>
             </div>
             <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:12px; font-size:0.85rem;">
@@ -912,8 +1381,14 @@ async function ejecutarAuditoriaIntegridad() {
 
         document.getElementById('modal-auditoria').style.display = 'flex';
     } catch (err) {
-        alert("Error al ejecutar auditoría de seguridad");
+        console.error("Error al ejecutar auditoría de seguridad:", err);
+        mostrarToast("Error al ejecutar auditoría de seguridad", "error");
     }
+}
+
+function cerrarModalAuditoria() {
+    const modal = document.getElementById('modal-auditoria');
+    if (modal) modal.style.display = 'none';
 }
 
 // ==========================================
@@ -939,16 +1414,20 @@ async function confirmarNotaCredito() {
 
         const d = await res.json();
         if (res.ok) {
-            alert(`Nota de Crédito Fiscal Emitida: ${d.numeroNC}\nFactura Afectada: ${d.facturaAfectada}\nMonto Devuelto: Bs. ${d.totalDevueltoVes.toFixed(2)}\nMercancía reingresada al inventario.`);
+            mostrarAlertaFlotante(
+                "Nota de Crédito Fiscal Emitida",
+                `Nota de Crédito: <strong>${d.numeroNC}</strong><br>Factura Afectada: <strong>${d.facturaAfectada}</strong><br>Monto Devuelto: <strong>Bs. ${d.totalDevueltoVes.toFixed(2)}</strong><br>✓ Mercancía reingresada al inventario y Kárdex.`,
+                "success"
+            );
             document.getElementById('modal-nc').style.display = 'none';
             cargarLibroFiscal();
             cargarInventario();
             cargarKPIs();
         } else {
-            alert(`Error: ${d.mensaje}`);
+            mostrarToast(`Error: ${d.mensaje}`, "error");
         }
     } catch (err) {
-        alert("Error de conexión al procesar Nota de Crédito");
+        mostrarToast("Error de conexión al procesar Nota de Crédito", "error");
     }
 }
 

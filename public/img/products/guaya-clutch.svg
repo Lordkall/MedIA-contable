@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 150" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#94a3b8"/>
+      <stop offset="100%" stop-color="#64748b"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#94a3b8" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+  <rect width="200" height="150" fill="transparent"/>
+  
+  <g transform="translate(45, 20)" filter="url(#glow)">
+    <path d="M 15 85 C 30 20 80 20 95 85" fill="none" stroke="#1e293b" stroke-width="7"/>
+    <path d="M 15 85 C 30 20 80 20 95 85" fill="none" stroke="#94a3b8" stroke-width="2"/>
+    <!-- Terminales / prisioneros de guaya -->
+    <circle cx="15" cy="85" r="4.5" fill="#fbbf24"/>
+    <circle cx="95" cy="85" r="4.5" fill="#fbbf24"/>
+    <text x="55" y="110" font-family="system-ui, sans-serif" font-size="8" font-weight="900" fill="#ffffff" text-anchor="middle">GUAYA CLUTCH</text>
+  </g>
+</svg>

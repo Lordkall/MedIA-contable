@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 150" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e2e8f0"/>
+      <stop offset="100%" stop-color="#94a3b8"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#e2e8f0" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+  <rect width="200" height="150" fill="transparent"/>
+  
+  <g transform="translate(60, 15)" filter="url(#glow)">
+    <!-- Terminal -->
+    <rect x="36" y="5" width="8" height="12" rx="2" fill="#fbbf24"/>
+    <!-- Cerámica acanalada -->
+    <rect x="32" y="17" width="16" height="30" rx="3" fill="#ffffff" stroke="#94a3b8" stroke-width="1.5"/>
+    <line x1="32" y1="23" x2="48" y2="23" stroke="#94a3b8" stroke-width="1.5"/>
+    <line x1="32" y1="29" x2="48" y2="29" stroke="#94a3b8" stroke-width="1.5"/>
+    <line x1="32" y1="35" x2="48" y2="35" stroke="#94a3b8" stroke-width="1.5"/>
+    <text x="40" y="44" font-family="system-ui, sans-serif" font-size="6" font-weight="900" fill="#ef4444" text-anchor="middle">NGK</text>
+    <!-- Cuerpo hexagonal -->
+    <path d="M 28 47 L 52 47 L 50 65 L 30 65 Z" fill="#475569" stroke="#94a3b8" stroke-width="1.5"/>
+    <!-- Rosca -->
+    <rect x="33" y="65" width="14" height="28" fill="#334155" stroke="#64748b" stroke-width="1"/>
+    <line x1="33" y1="71" x2="47" y2="71" stroke="#94a3b8" stroke-width="1"/>
+    <line x1="33" y1="77" x2="47" y2="77" stroke="#94a3b8" stroke-width="1"/>
+    <line x1="33" y1="83" x2="47" y2="83" stroke="#94a3b8" stroke-width="1"/>
+    <!-- Electrodo y chispa -->
+    <line x1="40" y1="93" x2="40" y2="102" stroke="#fbbf24" stroke-width="2"/>
+    <path d="M 37 105 L 43 105 L 43 99" stroke="#cbd5e1" stroke-width="1.5" fill="none"/>
+    <circle cx="40" cy="101" r="3" fill="#38bdf8"/>
+    <text x="40" y="118" font-family="system-ui, sans-serif" font-size="8" font-weight="900" fill="#fef08a" text-anchor="middle">D8EA</text>
+  </g>
+</svg>

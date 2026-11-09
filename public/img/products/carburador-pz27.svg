@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 150" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#94a3b8"/>
+      <stop offset="100%" stop-color="#64748b"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#94a3b8" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+  <rect width="200" height="150" fill="transparent"/>
+  
+  <g transform="translate(55, 15)" filter="url(#glow)">
+    <!-- Cuerpo del carburador -->
+    <rect x="25" y="10" width="26" height="35" rx="3" fill="#334155" stroke="#cbd5e1" stroke-width="2"/>
+    <rect x="15" y="45" width="46" height="35" rx="5" fill="#475569" stroke="#cbd5e1" stroke-width="2"/>
+    <!-- Cuba -->
+    <path d="M 20 80 L 56 80 L 52 105 L 24 105 Z" fill="#1e293b" stroke="#fbbf24" stroke-width="2"/>
+    <circle cx="38" cy="62" r="12" fill="#0f172a" stroke="#cbd5e1" stroke-width="1.5"/>
+    <text x="38" y="97" font-family="system-ui, sans-serif" font-size="8" font-weight="900" fill="#fbbf24" text-anchor="middle">PZ-27</text>
+  </g>
+</svg>
