@@ -68,6 +68,25 @@ async function cargarTasaBCV() {
     }
 }
 
+async function sincronizarBCVAutoPOS(btnEl) {
+    const icon = document.getElementById('sync-icon-pos');
+    if (icon) icon.classList.add('sync-spin');
+    try {
+        const res = await fetch('/api/bcv/sincronizar', { method: 'POST' });
+        const data = await res.json();
+        if (res.ok && data.exito) {
+            state.tasaBcv = data.tasa;
+            document.getElementById('pos-bcv-rate').innerText = `Bs. ${data.tasa.toFixed(2)}`;
+            await cargarCatalogo();
+            actualizarCarritoUI();
+        }
+    } catch(err) {
+        console.error('Error al sincronizar BCV en POS', err);
+    } finally {
+        if (icon) icon.classList.remove('sync-spin');
+    }
+}
+
 async function cargarSesionCaja() {
     try {
         const res = await fetch('/api/pos/sesion');

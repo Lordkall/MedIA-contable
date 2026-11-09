@@ -95,6 +95,10 @@ const server = http.createServer(async (req, res) => {
         if (pathname === '/api/bcv/tasa' && method === 'GET') {
             return sendJSON(res, BCVManager.getTasaActual());
         }
+        if (pathname === '/api/bcv/sincronizar' && method === 'POST') {
+            const syncRes = await BCVManager.sincronizarTasaBCV();
+            return sendJSON(res, syncRes);
+        }
         if (pathname === '/api/bcv/tasa' && method === 'POST') {
             const body = await parseBody(req);
             const r = BCVManager.registrarTasa(body.tasa, body.fecha);
@@ -274,6 +278,11 @@ const server = http.createServer(async (req, res) => {
         console.error('[MeDIa Server Error]', error);
         sendError(res, error, 500);
     }
+});
+
+// Intentar sincronizar tasa BCV automáticamente al iniciar
+BCVManager.sincronizarTasaBCV().catch(err => {
+    console.log('[MeDIa BCV] Aviso al iniciar:', err.message);
 });
 
 server.listen(PORT, () => {

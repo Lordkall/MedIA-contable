@@ -147,6 +147,55 @@ async function guardarTasaBCV() {
     }
 }
 
+/**
+ * Agarra automáticamente la tasa oficial del Banco Central de Venezuela (BCV)
+ * en tiempo real sin intervención manual
+ */
+async function sincronizarBCVAuto(btnEl) {
+    const feedback = document.getElementById('bcv-sync-feedback');
+    const icons = document.querySelectorAll('#sync-icon-sidebar, #sync-icon-header, #sync-icon-config');
+    icons.forEach(ic => ic.classList.add('sync-spin'));
+
+    if (feedback) {
+        feedback.innerHTML = `<span style="color:#60a5fa;">Conectando en vivo con el Banco Central de Venezuela...</span>`;
+    }
+
+    try {
+        const res = await fetch('/api/bcv/sincronizar', { method: 'POST' });
+        const data = await res.json();
+
+        if (res.ok && data.exito) {
+            adminState.tasaBcv = data.tasa;
+            const formatted = `Bs. ${data.tasa.toFixed(2)}`;
+
+            const topBcv = document.getElementById('top-bcv-rate');
+            if (topBcv) topBcv.innerText = formatted;
+            const sideBcv = document.getElementById('sidebar-bcv-val');
+            if (sideBcv) sideBcv.innerText = formatted;
+            const inputBcv = document.getElementById('config-tasa-bcv');
+            if (inputBcv) inputBcv.value = data.tasa;
+
+            if (feedback) {
+                feedback.innerHTML = `<span style="color:#86efac; font-weight:bold;">✓ Sincronización Exitosa con BCV: Bs. ${data.tasa.toFixed(2)} (Fecha: ${data.fecha})</span>`;
+            }
+
+            // Recalcular productos y catálogo en tiempo real con la nueva tasa
+            await cargarInventario();
+            await cargarKPIs();
+        } else {
+            if (feedback) {
+                feedback.innerHTML = `<span style="color:#f87171;">No se pudo obtener respuesta del BCV: ${data.mensaje || 'Error'}</span>`;
+            }
+        }
+    } catch (err) {
+        if (feedback) {
+            feedback.innerHTML = `<span style="color:#f87171;">Error de conexión con el servidor de MeDIa.</span>`;
+        }
+    } finally {
+        icons.forEach(ic => ic.classList.remove('sync-spin'));
+    }
+}
+
 // ==========================================
 // INVENTARIO & KÁRDEX
 // ==========================================

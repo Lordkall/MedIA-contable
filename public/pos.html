@@ -69,23 +69,27 @@
         </div>
 
         <div class="top-indicators">
-            <div class="indicator-badge bcv">
-                <span>BCV:</span>
+            <div class="pill-badge bcv" style="gap: 8px;">
+                <span>BCV Oficial:</span>
                 <strong id="pos-bcv-rate">Bs. --</strong>
+                <button onclick="sincronizarBCVAutoPOS(this)" class="sync-bcv-btn" title="Sincronizar automáticamente con el Banco Central de Venezuela">
+                    <svg id="sync-icon-pos" style="width:12px; height:12px; stroke:currentColor; stroke-width:2.5; fill:none;" viewBox="0 0 24 24"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg>
+                    <span>Auto</span>
+                </button>
             </div>
 
             <div class="pos-top-actions">
-                <button onclick="solicitarReporteX()" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.85rem;" title="Lectura X sin corte fiscal">
+                <button onclick="solicitarReporteX()" class="btn-glass" style="padding: 6px 12px; font-size: 0.85rem;" title="Lectura X sin corte fiscal">
                     Reporte X
                 </button>
-                <button onclick="solicitarReporteZ()" class="btn btn-warning" style="padding: 6px 12px; font-size: 0.85rem;" title="Cierre Z Diario Oficial SENIAT">
+                <button onclick="solicitarReporteZ()" class="btn-glass" style="padding: 6px 12px; font-size: 0.85rem; color:#fbbf24; border-color:rgba(245, 158, 11, 0.4);" title="Cierre Z Diario Oficial SENIAT">
                     Cierre Z
                 </button>
-                <button onclick="gestionarCajaModal()" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.85rem;">
+                <button onclick="gestionarCajaModal()" class="btn-glass" style="padding: 6px 12px; font-size: 0.85rem;">
                     Caja
                 </button>
-                <a href="/admin.html" class="btn btn-primary" style="padding: 6px 12px; font-size: 0.85rem; text-decoration: none;">
-                    Administrativo →
+                <a href="/admin.html" class="btn-glass btn-glass-primary" style="padding: 6px 14px; font-size: 0.85rem; text-decoration: none;">
+                    ← Volver al Dashboard
                 </a>
             </div>
         </div>
