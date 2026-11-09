@@ -17,6 +17,11 @@ class DBManager {
             const schemaSql = fs.readFileSync(SCHEMA_PATH, 'utf-8');
             this.db.exec(schemaSql);
         }
+        try {
+            this.db.exec("ALTER TABLE productos ADD COLUMN imagen_url TEXT;");
+        } catch (e) {
+            // Columna ya existe
+        }
     }
 
     query(sql, params = []) {

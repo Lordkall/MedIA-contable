@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 150" width="100%" height="100%">
+  <defs>
+    <linearGradient id="whiskyBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#064e3b"/>
+      <stop offset="100%" stop-color="#022c22"/>
+    </linearGradient>
+  </defs>
+  <rect width="200" height="150" fill="transparent"/>
+  <g transform="translate(68, 12)">
+    <rect x="24" y="0" width="16" height="12" fill="#d97706" rx="2"/>
+    <!-- Bottle -->
+    <path d="M 26 12 L 26 25 C 26 35 6 45 6 60 L 6 120 C 6 125 12 128 32 128 C 52 128 58 125 58 120 L 58 60 C 58 45 38 35 38 25 L 38 12 Z" fill="url(#whiskyBg)" stroke="#059669" stroke-width="1.2"/>
+    <!-- Red Seal -->
+    <circle cx="32" cy="50" r="8" fill="#dc2626"/>
+    <!-- Label -->
+    <rect x="12" y="66" width="40" height="42" rx="3" fill="#fef08a" stroke="#ca8a04"/>
+    <text x="32" y="80" font-family="'Times New Roman', serif" font-size="6.5" font-weight="900" fill="#1e293b" text-anchor="middle">BUCHANAN'S</text>
+    <text x="32" y="93" font-family="'Times New Roman', serif" font-size="11" font-weight="900" fill="#dc2626" text-anchor="middle">12</text>
+    <text x="32" y="102" font-family="system-ui, sans-serif" font-size="4.5" font-weight="700" fill="#1e293b" text-anchor="middle">DE LUXE SCOTCH</text>
+  </g>
+</svg>

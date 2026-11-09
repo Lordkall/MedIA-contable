@@ -127,12 +127,106 @@ async function cargarClientes() {
         state.clientes.forEach(c => {
             select.innerHTML += `<option value="${c.id}">${c.razon_social} (${c.rif_completo})</option>`;
         });
-        state.clienteSeleccionadoId = state.clientes[0] ? state.clientes[0].id : null;
-        select.addEventListener('change', (e) => {
-            state.clienteSeleccionadoId = e.target.value;
-        });
+        
+        // Seleccionar Consumidor Final por defecto si existe, o el primero
+        const consFinal = state.clientes.find(c => c.numero_documento === '00000000');
+        if (consFinal) {
+            state.clienteSeleccionadoId = consFinal.id;
+            select.value = consFinal.id;
+        } else {
+            state.clienteSeleccionadoId = state.clientes[0] ? state.clientes[0].id : null;
+        }
+
+        actualizarFichaClienteDisplay(state.clienteSeleccionadoId);
+
     } catch (err) {
         console.error('Error al cargar clientes', err);
+    }
+}
+
+function alCambiarClientePOS(selectEl) {
+    state.clienteSeleccionadoId = selectEl.value;
+    actualizarFichaClienteDisplay(selectEl.value);
+}
+
+function seleccionarConsumidorFinal() {
+    const consFinal = state.clientes.find(c => c.numero_documento === '00000000');
+    const select = document.getElementById('cart-client-select');
+    if (consFinal) {
+        state.clienteSeleccionadoId = consFinal.id;
+        select.value = consFinal.id;
+        actualizarFichaClienteDisplay(consFinal.id);
+        mostrarToast("Cliente: Consumidor Final (Contado)", 'info');
+    }
+}
+
+function actualizarFichaClienteDisplay(clienteId) {
+    const cliente = state.clientes.find(c => String(c.id) === String(clienteId));
+    if (!cliente) return;
+
+    const nombreEl = document.getElementById('client-display-nombre');
+    const rifEl = document.getElementById('client-display-rif');
+    const dirEl = document.getElementById('client-display-direccion');
+    const tlfEl = document.getElementById('client-display-telefono');
+
+    if (nombreEl) nombreEl.innerText = cliente.razon_social;
+    if (rifEl) rifEl.innerText = cliente.rif_completo;
+    if (dirEl) dirEl.innerText = cliente.direccion || 'Mostrador / Sin dirección física';
+    if (tlfEl) tlfEl.innerText = cliente.telefono || '--';
+}
+
+function abrirModalNuevoClientePOS() {
+    document.getElementById('modal-nuevo-cliente-pos').style.display = 'flex';
+}
+
+function cerrarModalNuevoClientePOS() {
+    document.getElementById('modal-nuevo-cliente-pos').style.display = 'none';
+}
+
+async function guardarNuevoClienteDesdePOS() {
+    const tipo = document.getElementById('pos-cli-tipo').value;
+    const num = document.getElementById('pos-cli-num').value.trim();
+    const digito = document.getElementById('pos-cli-digito').value.trim();
+    const razon = document.getElementById('pos-cli-nombre').value.trim();
+    const direccion = document.getElementById('pos-cli-direccion').value.trim();
+    const telefono = document.getElementById('pos-cli-telefono').value.trim();
+    const tipoContrib = document.getElementById('pos-cli-contrib').value;
+
+    if (!num || !razon) {
+        mostrarToast("Cédula/RIF y Razón Social son obligatorios.", 'error');
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/terceros/clientes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                tipo_documento: tipo,
+                numero_documento: num,
+                digito_verificador: digito,
+                razon_social: razon,
+                direccion: direccion,
+                telefono: telefono,
+                tipo_contribuyente: tipoContrib
+            })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+            mostrarToast("Cliente registrado y seleccionado para la factura.", 'success');
+            cerrarModalNuevoClientePOS();
+            // Recargar lista y seleccionar nuevo
+            await cargarClientes();
+            const select = document.getElementById('cart-client-select');
+            select.value = data.id;
+            state.clienteSeleccionadoId = data.id;
+            actualizarFichaClienteDisplay(data.id);
+        } else {
+            mostrarToast(`Error: ${data.mensaje}`, 'error');
+        }
+    } catch (err) {
+        mostrarToast("Error de conexión al registrar cliente.", 'error');
     }
 }
 
@@ -163,7 +257,7 @@ function buscarProductosManual() {
 }
 
 // ==========================================
-// RENDERIZADO DEL CATÁLOGO EN POS
+// RENDERIZADO DEL CATÁLOGO EN POS (CON FOTOS Y GLASS V5)
 // ==========================================
 function renderizarCatalogo() {
     const container = document.getElementById('pos-products-container');
@@ -174,15 +268,22 @@ function renderizarCatalogo() {
 
     container.innerHTML = state.catalogo.map(prod => {
         const stockAlerta = prod.stock_actual <= prod.stock_minimo ? 'color:#f87171;' : 'color:#86efac;';
+        const imgUrl = prod.imagen_url || '/img/products/placeholder.svg';
+        const catTintClass = `cat-tint-${prod.categoria_id || 1}`;
+
         return `
-            <div class="product-card" onclick="agregarAlCarritoPorId(${prod.id})">
+            <div class="product-card ${catTintClass}" onclick="agregarAlCarritoPorId(${prod.id})">
+                <!-- Foto del Producto -->
+                <div class="product-img-box">
+                    <img src="${imgUrl}" alt="${prod.descripcion}" class="product-img" onerror="this.onerror=null; this.src='/img/products/placeholder.svg';">
+                    <span class="prod-tag tag-${prod.alicuota_iva}" style="position:absolute; top:6px; left:6px;">${getNombreAlicuota(prod.alicuota_iva)}</span>
+                    <code style="position:absolute; top:6px; right:6px; font-size:0.65rem; background:rgba(0,0,0,0.6); padding:2px 6px; border-radius:4px; color:#94a3b8;">${prod.codigo_barra}</code>
+                </div>
+
                 <div>
-                    <div class="prod-header">
-                        <span class="prod-tag tag-${prod.alicuota_iva}">${getNombreAlicuota(prod.alicuota_iva)}</span>
-                        <code style="font-size:0.7rem; color:var(--text-muted);">${prod.codigo_barra}</code>
-                    </div>
                     <div class="prod-desc" title="${prod.descripcion}">${prod.descripcion}</div>
                 </div>
+
                 <div>
                     <div class="prod-prices">
                         <span class="price-ves">Bs. ${prod.precio_ves.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>

@@ -82,6 +82,27 @@ function seedDatabase() {
         });
     }
 
+    // Actualizar fotos oficiales en catálogo para productos base
+    const imagenesMap = {
+        '7591001001': '/img/products/harina-pan.svg',
+        '7591001002': '/img/products/arroz-mary.svg',
+        '7591001003': '/img/products/aceite-mazeite.svg',
+        '7591001004': '/img/products/pasta-primor.svg',
+        '7591001005': '/img/products/queso-llanero.svg',
+        '7592002001': '/img/products/coca-cola.svg',
+        '7592002002': '/img/products/minalba.svg',
+        '7592002003': '/img/products/yukery.svg',
+        '7593003001': '/img/products/las-llaves.svg',
+        '7593003002': '/img/products/protex.svg',
+        '7594004001': '/img/products/buchanans.svg',
+        '7595005001': '/img/products/alimento-aves.svg'
+    };
+    for (const [barcode, imgUrl] of Object.entries(imagenesMap)) {
+        try {
+            db.run("UPDATE productos SET imagen_url = ? WHERE codigo_barra = ?", [imgUrl, barcode]);
+        } catch(e) {}
+    }
+
     // 5. Clientes Pre-cargados
     const countCli = db.get("SELECT COUNT(*) as count FROM clientes");
     if (countCli.count === 0) {

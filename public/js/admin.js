@@ -259,10 +259,18 @@ function renderizarTablaInventario(items) {
 
     tbody.innerHTML = items.map(p => {
         const stockAlerta = p.stock_actual <= p.stock_minimo ? 'color:#f87171; font-weight:bold;' : 'color:#86efac;';
+        const imgUrl = p.imagen_url || '/img/products/placeholder.svg';
         return `
             <tr>
                 <td><code>${p.codigo_barra}</code></td>
-                <td><strong>${p.descripcion}</strong></td>
+                <td>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <div style="width:38px; height:38px; border-radius:8px; background:rgba(0,0,0,0.4); border:1px solid var(--glass-border); display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0;">
+                            <img src="${imgUrl}" alt="${p.descripcion}" style="width:100%; height:100%; object-fit:contain; padding:2px;" onerror="this.onerror=null; this.src='/img/products/placeholder.svg';">
+                        </div>
+                        <strong>${p.descripcion}</strong>
+                    </div>
+                </td>
                 <td><small style="color:var(--text-muted);">${p.categoria_nombre || 'General'}</small></td>
                 <td><span class="prod-tag tag-${p.alicuota_iva}">${p.alicuota_iva === 'G' ? 'IVA 16%' : p.alicuota_iva === 'E' ? 'EXENTO' : p.alicuota_iva}</span></td>
                 <td>$ ${p.costo_usd.toFixed(2)}</td>
@@ -299,13 +307,14 @@ async function guardarProductoNuevo() {
     const desc = document.getElementById('prod-form-desc').value.trim();
     const cat = document.getElementById('prod-form-cat').value;
     const iva = document.getElementById('prod-form-iva').value;
+    const imgUrl = document.getElementById('prod-form-img') ? document.getElementById('prod-form-img').value.trim() : '';
     const costo = parseFloat(document.getElementById('prod-form-costo').value) || 0;
     const precio = parseFloat(document.getElementById('prod-form-precio').value) || 0;
     const stock = parseFloat(document.getElementById('prod-form-stock').value) || 0;
     const stockMin = parseFloat(document.getElementById('prod-form-stock-min').value) || 5;
 
     if (!barcode || !desc) {
-        alert("Código de barras y descripción son obligatorios.");
+        mostrarToast("Código de barras y descripción son obligatorios.", 'error');
         return;
     }
 
@@ -321,21 +330,22 @@ async function guardarProductoNuevo() {
                 costo_usd: costo,
                 precio_usd: precio,
                 stock_actual: stock,
-                stock_minimo: stockMin
+                stock_minimo: stockMin,
+                imagen_url: imgUrl
             })
         });
 
         if (res.ok) {
-            alert("Producto guardado exitosamente.");
+            mostrarToast("Producto guardado exitosamente.", 'success');
             cerrarModalProducto();
             cargarInventario();
             cargarKPIs();
         } else {
             const d = await res.json();
-            alert(`Error: ${d.mensaje}`);
+            mostrarToast(`Error: ${d.mensaje}`, 'error');
         }
     } catch (err) {
-        alert("Error de conexión al guardar producto.");
+        mostrarToast("Error de conexión al guardar producto.", 'error');
     }
 }
 

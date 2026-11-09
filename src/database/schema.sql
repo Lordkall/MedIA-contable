@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS productos (
     stock_actual REAL NOT NULL DEFAULT 0.0,
     stock_minimo REAL NOT NULL DEFAULT 5.0,
     unidad_medida TEXT DEFAULT 'UNID',           -- UNID, KG, BLISTER, BULTO
+    imagen_url TEXT,                             -- URL o ruta de la foto del producto
     activo INTEGER DEFAULT 1,
     creado_en TEXT DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (categoria_id) REFERENCES categorias(id)

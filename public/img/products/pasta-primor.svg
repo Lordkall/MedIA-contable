@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 150" width="100%" height="100%">
+  <defs>
+    <linearGradient id="primorBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e3a8a"/>
+      <stop offset="100%" stop-color="#172554"/>
+    </linearGradient>
+  </defs>
+  <rect width="200" height="150" fill="transparent"/>
+  <g transform="translate(45, 45)">
+    <!-- Long pasta packaging -->
+    <rect x="0" y="0" width="110" height="60" rx="6" fill="url(#primorBg)"/>
+    <rect x="0" y="20" width="110" height="20" fill="#dc2626"/>
+    <text x="55" y="35" font-family="system-ui, sans-serif" font-size="15" font-weight="900" fill="#ffffff" text-anchor="middle" font-style="italic">PRIMOR</text>
+    <text x="55" y="52" font-family="system-ui, sans-serif" font-size="7" font-weight="700" fill="#fef08a" text-anchor="middle">SPAGHETTI 1KG</text>
+    <line x1="10" y1="10" x2="100" y2="10" stroke="#fef08a" stroke-width="2"/>
+  </g>
+</svg>

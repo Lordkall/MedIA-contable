@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 150" width="100%" height="100%">
+  <defs>
+    <linearGradient id="oilBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a"/>
+      <stop offset="50%" stop-color="#facc15"/>
+      <stop offset="100%" stop-color="#eab308"/>
+    </linearGradient>
+  </defs>
+  <rect width="200" height="150" fill="transparent"/>
+  <!-- Bottle -->
+  <g transform="translate(75, 12)">
+    <!-- Cap -->
+    <rect x="18" y="0" width="14" height="10" rx="2" fill="#15803d"/>
+    <rect x="20" y="10" width="10" height="12" fill="#fef08a" opacity="0.6"/>
+    <!-- Bottle body -->
+    <path d="M 20 22 C 10 35 5 45 5 55 L 5 118 C 5 122 10 125 15 125 L 35 125 C 40 125 45 122 45 118 L 45 55 C 45 45 40 35 30 22 Z" fill="url(#oilBg)" stroke="#ca8a04" stroke-width="1.2"/>
+    <!-- Label -->
+    <rect x="7" y="55" width="36" height="42" rx="4" fill="#ffffff" stroke="#e2e8f0"/>
+    <rect x="7" y="58" width="36" height="12" fill="#15803d"/>
+    <text x="25" y="67" font-family="system-ui, sans-serif" font-size="7.5" font-weight="900" fill="#ffffff" text-anchor="middle">MAZEITE</text>
+    <circle cx="25" cy="84" r="9" fill="#fef08a"/>
+    <path d="M 25 78 Q 28 82 25 90 Q 22 82 25 78" fill="#eab308"/>
+  </g>
+</svg>

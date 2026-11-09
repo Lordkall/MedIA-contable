@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 150" width="100%" height="100%">
+  <rect width="200" height="150" fill="transparent"/>
+  <g transform="translate(55, 35)">
+    <!-- Cheese block 3D perspective -->
+    <path d="M 10 30 L 60 5 L 85 20 L 35 45 Z" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+    <path d="M 10 30 L 35 45 L 35 85 L 10 70 Z" fill="#e2e8f0" stroke="#cbd5e1" stroke-width="1.5"/>
+    <path d="M 35 45 L 85 20 L 85 60 L 35 85 Z" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+    <!-- Holes in cheese -->
+    <circle cx="50" cy="50" r="3" fill="#cbd5e1"/>
+    <circle cx="65" cy="40" r="4.5" fill="#cbd5e1"/>
+    <circle cx="70" cy="55" r="2.5" fill="#cbd5e1"/>
+    <circle cx="25" cy="55" r="3" fill="#94a3b8"/>
+    <text x="48" y="102" font-family="system-ui, sans-serif" font-size="9" font-weight="800" fill="#f8fafc" text-anchor="middle">QUESO LLANERO</text>
+  </g>
+</svg>

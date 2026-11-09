@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 150" width="100%" height="100%">
+  <rect width="200" height="150" fill="transparent"/>
+  <g transform="translate(65, 35)">
+    <rect x="0" y="0" width="70" height="70" rx="14" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.12)" stroke-width="1.5"/>
+    <!-- Minimalist package icon -->
+    <path d="M 35 18 L 55 28 L 35 38 L 15 28 Z" fill="none" stroke="#60a5fa" stroke-width="2"/>
+    <path d="M 15 28 L 15 50 L 35 60 L 35 38" fill="none" stroke="#60a5fa" stroke-width="2"/>
+    <path d="M 55 28 L 55 50 L 35 60" fill="none" stroke="#60a5fa" stroke-width="2"/>
+    <line x1="35" y1="38" x2="35" y2="28" stroke="#93c5fd" stroke-width="1.5"/>
+  </g>
+</svg>

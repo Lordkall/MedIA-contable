@@ -61,8 +61,8 @@ class InventarioService {
         const res = db.run(`
             INSERT INTO productos (
                 codigo_barra, referencia, descripcion, categoria_id, alicuota_iva,
-                precio_usd, costo_usd, stock_actual, stock_minimo, unidad_medida
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                precio_usd, costo_usd, stock_actual, stock_minimo, unidad_medida, imagen_url
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
             datos.codigo_barra,
             datos.referencia || '',
@@ -73,7 +73,8 @@ class InventarioService {
             Number(datos.costo_usd) || 0,
             Number(datos.stock_actual) || 0,
             Number(datos.stock_minimo) || 5,
-            datos.unidad_medida || 'UNID'
+            datos.unidad_medida || 'UNID',
+            datos.imagen_url || ''
         ]);
 
         const nuevoId = res.lastInsertRowid;
@@ -99,7 +100,8 @@ class InventarioService {
                 precio_usd = ?,
                 costo_usd = ?,
                 stock_minimo = ?,
-                unidad_medida = ?
+                unidad_medida = ?,
+                imagen_url = ?
             WHERE id = ?
         `, [
             datos.codigo_barra,
@@ -111,6 +113,7 @@ class InventarioService {
             Number(datos.costo_usd),
             Number(datos.stock_minimo),
             datos.unidad_medida,
+            datos.imagen_url || '',
             id
         ]);
         return db.get("SELECT * FROM productos WHERE id = ?", [id]);
