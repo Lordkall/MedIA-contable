@@ -51,6 +51,15 @@ class DBManager {
     exec(sql) {
         return this.db.exec(sql);
     }
+
+    reemplazarYReabrir(rutaNuevoDb) {
+        this.db.close();
+        fs.copyFileSync(rutaNuevoDb, DB_PATH);
+        try { if (fs.existsSync(DB_PATH + '-wal')) fs.unlinkSync(DB_PATH + '-wal'); } catch(e){}
+        try { if (fs.existsSync(DB_PATH + '-shm')) fs.unlinkSync(DB_PATH + '-shm'); } catch(e){}
+        this.db = new DatabaseSync(DB_PATH);
+        this.init();
+    }
 }
 
 const dbInstance = new DBManager();

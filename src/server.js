@@ -312,6 +312,14 @@ const server = http.createServer(async (req, res) => {
             const backups = BackupService.listarBackups();
             return sendJSON(res, { exito: true, backups });
         }
+        if (pathname === '/api/sistema/backup/restaurar' && method === 'POST') {
+            const body = await parseBody(req);
+            if (!body || !body.archivo) {
+                return sendError(res, "Debe indicar el nombre del archivo de copia a restaurar", 400);
+            }
+            const resultado = BackupService.restaurarBackup(body.archivo);
+            return sendJSON(res, resultado);
+        }
         if (pathname.startsWith('/api/sistema/backup/descargar/') && method === 'GET') {
             const fileName = pathname.replace('/api/sistema/backup/descargar/', '');
             const filePath = BackupService.getRutaBackupSegura(fileName);

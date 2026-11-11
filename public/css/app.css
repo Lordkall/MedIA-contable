@@ -103,7 +103,7 @@ body::before {
     border-right: 1px solid var(--glass-border);
     display: flex;
     flex-direction: column;
-    padding: 20px 14px;
+    padding: 14px 10px;
     z-index: 100;
 }
 
@@ -111,9 +111,9 @@ body::before {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 4px 8px 20px 8px;
+    padding: 2px 6px 12px 6px;
     border-bottom: 1px solid var(--glass-border);
-    margin-bottom: 18px;
+    margin-bottom: 10px;
 }
 
 .brand-logo-badge {
@@ -146,26 +146,37 @@ body::before {
 
 .sidebar-menu {
     flex: 1;
+    min-height: 0;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 3px;
     overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-gutter: stable;
+    padding-right: 4px;
 }
 
 .sidebar-menu::-webkit-scrollbar {
-    width: 4px;
+    width: 5px;
+}
+.sidebar-menu::-webkit-scrollbar-track {
+    background: rgba(11, 20, 39, 0.4);
+    border-radius: 4px;
 }
 .sidebar-menu::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(56, 189, 248, 0.35);
     border-radius: 4px;
+}
+.sidebar-menu::-webkit-scrollbar-thumb:hover {
+    background: #38bdf8;
 }
 
 .menu-category-title {
-    font-size: 0.68rem;
+    font-size: 0.65rem;
     text-transform: uppercase;
     letter-spacing: 1.2px;
     color: #94a3b8;
-    padding: 14px 10px 4px 10px;
+    padding: 8px 8px 2px 8px;
     font-weight: 700;
 }
 
@@ -173,23 +184,22 @@ body::before {
 .nav-item {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 10px 14px;
+    gap: 10px;
+    padding: 8px 12px;
     color: #cbd5e1;
     text-decoration: none;
-    border-radius: 12px;
-    font-size: 0.88rem;
+    border-radius: 10px;
+    font-size: 0.84rem;
     font-weight: 600;
-    transition: all 0.18s ease;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
     cursor: pointer;
     border: 1px solid transparent;
 }
 
 .nav-item:hover {
     color: #ffffff;
-    background: rgba(255, 255, 255, 0.07);
-    border-color: rgba(255, 255, 255, 0.12);
-    transform: translateX(3px);
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(56, 189, 248, 0.28);
 }
 
 .nav-item.active {
@@ -218,8 +228,9 @@ body::before {
 
 /* Widget Inferior de Tasa BCV con Sincronizador Automático */
 .sidebar-footer {
-    padding-top: 14px;
+    padding-top: 10px;
     border-top: 1px solid var(--glass-border);
+    flex-shrink: 0;
 }
 
 .fiscal-status-card {

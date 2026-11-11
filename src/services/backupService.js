@@ -203,6 +203,61 @@ class BackupService {
 
         return fullPath;
     }
+
+    /**
+     * Restaura la base de datos a partir de una copia de seguridad existente en la carpeta backups/
+     * Ejecuta:
+     * 1. Verificación previa de integridad SQLite PRAGMA integrity_check sobre la copia.
+     * 2. Creación automática de un respaldo de seguridad del estado actual antes de proceder (evita pérdida de datos).
+     * 3. Reemplazo atómico de la base de datos en caliente.
+     * 4. Retorno de estadísticas del estado restaurado.
+     */
+    static restaurarBackup(nombreArchivo) {
+        const rutaBackup = this.getRutaBackupSegura(nombreArchivo);
+
+        // 1. Verificar integridad del archivo a restaurar
+        let checkValido = false;
+        try {
+            const tempDb = new DatabaseSync(rutaBackup);
+            const resultado = tempDb.prepare("PRAGMA integrity_check;").all();
+            tempDb.close();
+            if (resultado && resultado.length === 1 && resultado[0].integrity_check === 'ok') {
+                checkValido = true;
+            }
+        } catch (e) {
+            throw new Error(`El archivo de copia está corrupto o dañado: ${e.message}`);
+        }
+
+        if (!checkValido) {
+            throw new Error("El archivo de copia no superó la verificación de integridad estructural (PRAGMA integrity_check). Restauración cancelada por seguridad.");
+        }
+
+        // 2. Crear respaldo de seguridad PREVIO al reemplazo (Blindaje Total)
+        const respaldoSeguridadPrevio = this.generarBackup();
+
+        // 3. Reemplazar y reabrir conexión a base de datos activa
+        db.reemplazarYReabrir(rutaBackup);
+
+        // 4. Obtener estadísticas del nuevo estado activo
+        const vCount = db.get("SELECT COUNT(*) as c FROM ventas");
+        const pCount = db.get("SELECT COUNT(*) as c FROM productos");
+        const kCount = db.get("SELECT COUNT(*) as c FROM kardex");
+        const cCount = db.get("SELECT COUNT(*) as c FROM clientes");
+
+        return {
+            exito: true,
+            archivoRestaurado: path.basename(rutaBackup),
+            fechaRestauracion: new Date().toISOString().replace('T', ' ').substring(0, 19),
+            respaldoPrevioCreado: respaldoSeguridadPrevio.archivo,
+            estadisticas: {
+                ventas: vCount ? vCount.c : 0,
+                productos: pCount ? pCount.c : 0,
+                kardex: kCount ? kCount.c : 0,
+                clientes: cCount ? cCount.c : 0
+            }
+        };
+    }
 }
 
 module.exports = BackupService;
+

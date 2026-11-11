@@ -1745,11 +1745,17 @@ async function cargarListaBackups() {
                         </div>
                     </td>
                     <td style="font-size:0.75rem; color:var(--text-muted);">${statsText}</td>
-                    <td style="text-align: center;">
-                        <a href="/api/sistema/backup/descargar/${encodeURIComponent(b.archivo)}" class="btn-glass btn-glass-primary" style="padding:4px 10px; font-size:0.75rem; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:4px;" title="Descargar copia de base de datos a este computador o pendrive">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                            <span>Descargar .db</span>
-                        </a>
+                    <td style="text-align: center; white-space: nowrap;">
+                        <div style="display:inline-flex; gap:6px;">
+                            <a href="/api/sistema/backup/descargar/${encodeURIComponent(b.archivo)}" class="btn-glass btn-glass-primary" style="padding:4px 9px; font-size:0.75rem; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:4px;" title="Descargar copia de base de datos a este computador o pendrive">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                <span>Descargar</span>
+                            </a>
+                            <button onclick="confirmarRestaurarBackup('${b.archivo}')" class="btn-glass" style="padding:4px 9px; font-size:0.75rem; font-weight:700; color:#fbbf24; border-color:rgba(245,158,11,0.45); display:inline-flex; align-items:center; gap:4px;" title="Restaurar base de datos a este punto en el tiempo">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                <span>Restaurar</span>
+                            </button>
+                        </div>
                     </td>
                 </tr>
             `;
@@ -1758,6 +1764,68 @@ async function cargarListaBackups() {
         console.error("Error al cargar lista de respaldos:", err);
         if (tbody) {
             tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:#f87171;">Error al consultar respaldos del servidor</td></tr>`;
+        }
+    }
+}
+
+let archivoParaRestaurar = null;
+
+function confirmarRestaurarBackup(archivo) {
+    archivoParaRestaurar = archivo;
+    const modal = document.getElementById('modal-restaurar-backup');
+    const nameEl = document.getElementById('restaurar-archivo-nombre');
+    if (nameEl) nameEl.innerText = archivo;
+    if (modal) modal.style.display = 'flex';
+}
+
+function cerrarModalRestaurarBackup() {
+    archivoParaRestaurar = null;
+    const modal = document.getElementById('modal-restaurar-backup');
+    if (modal) modal.style.display = 'none';
+}
+
+async function ejecutarRestauracionConfirmada() {
+    if (!archivoParaRestaurar) return;
+
+    const btn = document.getElementById('btn-ejecutar-restauracion');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = 'Restaurando y verificando...';
+    }
+
+    try {
+        const res = await fetch('/api/sistema/backup/restaurar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ archivo: archivoParaRestaurar })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.exito) {
+            cerrarModalRestaurarBackup();
+            mostrarAlertaFlotante(
+                "✓ Base de Datos Restaurada con Éxito",
+                `Se restauró correctamente el archivo: <strong>${data.archivoRestaurado}</strong><br>` +
+                `Fecha: ${data.fechaRestauracion}<br>` +
+                `<span style="color:#86efac;">✓ Se creó automáticamente un respaldo previo de resguardo: <strong>${data.respaldoPrevioCreado}</strong></span><br>` +
+                `Estado activo: ${data.estadisticas.ventas} ventas, ${data.estadisticas.productos} repuestos, ${data.estadisticas.kardex} movimientos de kárdex.`,
+                'success'
+            );
+
+            // Refrescar datos en la interfaz
+            await cargarKPIs();
+            await cargarInventario();
+            await cargarListaBackups();
+        } else {
+            mostrarToast(`Error al restaurar: ${data.mensaje || 'Fallo de verificación'}`, 'error');
+        }
+    } catch(e) {
+        console.error("Error al restaurar copia de seguridad:", e);
+        mostrarToast("Error de conexión al restaurar base de datos", "error");
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> <span>Sí, Restaurar Base de Datos</span>`;
         }
     }
 }

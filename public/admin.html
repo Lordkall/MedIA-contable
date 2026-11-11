@@ -1249,6 +1249,44 @@
         </div>
     </div>
 
+    <!-- MODAL CONFIRMAR RESTAURACIÓN DE BASE DE DATOS -->
+    <div id="modal-restaurar-backup" class="modal-overlay" style="display: none; z-index: 10005;">
+        <div class="modal-glass-content" style="max-width: 540px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--glass-border); padding-bottom: 12px; margin-bottom: 16px;">
+                <h3 style="font-size: 1.15rem; font-weight: 800; color: #fbbf24; display: flex; align-items: center; gap: 8px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    <span>Restaurar Base de Datos</span>
+                </h3>
+                <button type="button" onclick="cerrarModalRestaurarBackup()" style="background:none; border:none; color:var(--text-muted); cursor:pointer;">
+                    <svg style="width:20px; height:20px; stroke:currentColor; stroke-width:2; fill:none;" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 12px; padding: 14px; margin-bottom: 16px;">
+                <div style="font-size: 0.9rem; font-weight: 700; color: #fbbf24; margin-bottom: 6px;">
+                    ¿Confirma que desea restaurar el sistema al punto seleccionado?
+                </div>
+                <div style="font-size: 0.82rem; color: #cbd5e1; line-height: 1.45;">
+                    Archivo objetivo: <strong id="restaurar-archivo-nombre" style="color: #ffffff;">--</strong><br>
+                    <span style="color:#86efac;">✓ Se creará automáticamente un respaldo de seguridad del estado actual antes de proceder.</span><br>
+                    <span style="color:#93c5fd;">✓ Se verificará la integridad física PRAGMA antes de sobrescribir.</span>
+                </div>
+            </div>
+
+            <p style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 18px;">
+                Al restaurar, las ventas, el inventario, los clientes y la configuración regresarán exactamente al estado contenido en esa copia de seguridad.
+            </p>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" onclick="cerrarModalRestaurarBackup()" class="btn-glass">Cancelar</button>
+                <button type="button" id="btn-ejecutar-restauracion" onclick="ejecutarRestauracionConfirmada()" class="btn-glass" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(217, 119, 6, 0.4)); border-color: #f59e0b; color: #fef08a; font-weight: 800; display:inline-flex; align-items:center; gap:8px;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    <span>Sí, Restaurar Base de Datos</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Contenedor de Notificaciones Toast Flotantes -->
     <div id="toast-container" class="glass-toast-container"></div>
 </body>
