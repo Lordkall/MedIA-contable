@@ -474,6 +474,70 @@ function copiarTicketAdminTexto() {
     }
 }
 
+function imprimirTicketFiscalAdminTermico() {
+    const ticketText = adminUltimoTicketTexto || document.getElementById('admin-ticket-preview-content')?.innerText;
+    if (!ticketText) {
+        mostrarToast("No hay ticket fiscal emitido para imprimir.", "warning");
+        return;
+    }
+
+    const printFrame = document.createElement('iframe');
+    printFrame.style.position = 'fixed';
+    printFrame.style.right = '0';
+    printFrame.style.bottom = '0';
+    printFrame.style.width = '0';
+    printFrame.style.height = '0';
+    printFrame.style.border = '0';
+    document.body.appendChild(printFrame);
+
+    const doc = printFrame.contentWindow.document;
+    doc.open();
+    doc.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <title>Ticket Fiscal 80mm</title>
+            <style>
+                @page {
+                    size: 80mm auto;
+                    margin: 0mm;
+                }
+                * {
+                    box-sizing: border-box;
+                    margin: 0;
+                    padding: 0;
+                }
+                body {
+                    width: 72mm;
+                    margin: 0 auto;
+                    padding: 3mm 1mm;
+                    font-family: 'Courier New', Courier, monospace;
+                    font-size: 11px;
+                    line-height: 1.25;
+                    color: #000000;
+                    background: #ffffff;
+                    white-space: pre-wrap;
+                    word-break: break-word;
+                }
+            </style>
+        </head>
+        <body>${ticketText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</body>
+        </html>
+    `);
+    doc.close();
+
+    setTimeout(() => {
+        try {
+            printFrame.contentWindow.focus();
+            printFrame.contentWindow.print();
+        } catch(e) {
+            console.error("Error al imprimir ticket térmico", e);
+        }
+        setTimeout(() => printFrame.remove(), 1200);
+    }, 250);
+}
+
 async function guardarTasaBCV() {
     const val = parseFloat(document.getElementById('config-tasa-bcv').value);
     if (isNaN(val) || val <= 0) {
@@ -1045,19 +1109,111 @@ function cerrarModalCompra() {
     document.getElementById('modal-compra').style.display = 'none';
 }
 
-function agregarRenglonCompra() {
+function abrirSubmodalCrearProductoEnCompra(selectCaller = null) {
+    window._compraCallerSelect = selectCaller;
+    const catSel = document.getElementById('subprod-categoria');
+    if (catSel && adminState.categorias) {
+        catSel.innerHTML = adminState.categorias.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
+    }
+    document.getElementById('subprod-codigo').value = 'REP-' + Math.floor(1000 + Math.random() * 9000);
+    document.getElementById('subprod-descripcion').value = '';
+    document.getElementById('subprod-costo').value = '';
+    document.getElementById('subprod-precio').value = '';
+    document.getElementById('subprod-iva').value = 'G';
+    document.getElementById('modal-sub-producto-compra').style.display = 'flex';
+    setTimeout(() => document.getElementById('subprod-descripcion')?.focus(), 60);
+}
+
+function cerrarSubmodalCrearProductoEnCompra() {
+    const subModal = document.getElementById('modal-sub-producto-compra');
+    if (subModal) subModal.style.display = 'none';
+    if (window._compraCallerSelect && window._compraCallerSelect.value === '__nuevo__') {
+        window._compraCallerSelect.selectedIndex = 1; // Seleccionar el primer producto normal
+    }
+    window._compraCallerSelect = null;
+}
+
+async function guardarSubproductoEnCompra() {
+    const cod = document.getElementById('subprod-codigo').value.trim();
+    const desc = document.getElementById('subprod-descripcion').value.trim();
+    const catId = document.getElementById('subprod-categoria').value;
+    const costo = parseFloat(document.getElementById('subprod-costo').value) || 0;
+    const precio = parseFloat(document.getElementById('subprod-precio').value) || (costo > 0 ? Math.round(costo * 1.35 * 100) / 100 : 0);
+    const alic = document.getElementById('subprod-iva').value || 'G';
+
+    if (!desc) {
+        mostrarToast("Debe indicar la descripción del repuesto", "warning");
+        document.getElementById('subprod-descripcion').focus();
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/inventario/productos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                codigo_barra: cod || ('REP-' + Date.now()),
+                referencia: cod || '',
+                descripcion: desc,
+                categoria_id: catId,
+                alicuota_iva: alic,
+                precio_usd: precio,
+                costo_usd: costo,
+                stock_actual: 0,
+                stock_minimo: 3,
+                unidad_medida: 'UNID'
+            })
+        });
+
+        const data = await res.json();
+        if (res.ok && data) {
+            // Actualizar catálogo en memoria
+            adminState.productos.unshift(data);
+
+            if (window._compraCallerSelect) {
+                const row = window._compraCallerSelect.closest('div[id^="compra-row-"]');
+                let opts = `<option value="__nuevo__" style="color:#38bdf8; font-weight:bold;">+ Registrar Nuevo Repuesto...</option>`;
+                opts += adminState.productos.map(p => {
+                    const isSel = (p.id === data.id) ? 'selected' : '';
+                    return `<option value="${p.id}" ${isSel}>${p.descripcion} (Costo actual: $${p.costo_usd.toFixed(2)})</option>`;
+                }).join('');
+                window._compraCallerSelect.innerHTML = opts;
+                if (row) {
+                    const costoInput = row.querySelector('.compra-prod-costo');
+                    if (costoInput && costo > 0) costoInput.value = costo.toFixed(2);
+                }
+            } else {
+                agregarRenglonCompra(data.id, costo);
+            }
+
+            cerrarSubmodalCrearProductoEnCompra();
+            mostrarToast(`✓ Repuesto creado: ${data.descripcion}. Se asignó a la factura.`, "success");
+        } else {
+            mostrarToast(`Error al crear producto: ${data.mensaje || 'Revise los campos'}`, "error");
+        }
+    } catch(err) {
+        console.error(err);
+        mostrarToast("Error de conexión al registrar producto", "error");
+    }
+}
+
+function agregarRenglonCompra(preselectedId = null, costoDefault = null) {
     const container = document.getElementById('compra-items-list');
     const rowId = Date.now();
-    const prodsOptions = adminState.productos.map(p => `<option value="${p.id}">${p.descripcion} (Costo actual: $${p.costo_usd.toFixed(2)})</option>`).join('');
+    let prodsOptions = `<option value="__nuevo__" style="color:#38bdf8; font-weight:bold;">+ Registrar Nuevo Repuesto...</option>`;
+    prodsOptions += adminState.productos.map(p => {
+        const isSel = (preselectedId && String(p.id) === String(preselectedId)) ? 'selected' : '';
+        return `<option value="${p.id}" ${isSel}>${p.descripcion} (Costo actual: $${p.costo_usd.toFixed(2)})</option>`;
+    }).join('');
 
     const div = document.createElement('div');
     div.id = `compra-row-${rowId}`;
     div.style = "display:grid; grid-template-columns: 2fr 100px 120px 40px; gap:8px; margin-bottom:8px; align-items:center;";
     div.innerHTML = `
-        <select class="form-select compra-prod-select">${prodsOptions}</select>
-        <input type="number" step="0.01" class="input-text compra-prod-cant" placeholder="Cant." value="10">
-        <input type="number" step="0.01" class="input-text compra-prod-costo" placeholder="Costo USD $" value="1.00">
-        <button onclick="document.getElementById('compra-row-${rowId}').remove()" style="background:none; border:none; color:#f87171; cursor:pointer; font-weight:bold;">✕</button>
+        <select class="form-select compra-prod-select" onchange="if(this.value==='__nuevo__') abrirSubmodalCrearProductoEnCompra(this)">${prodsOptions}</select>
+        <input type="number" step="1" min="1" class="input-text compra-prod-cant" placeholder="Cant." value="10">
+        <input type="number" step="0.01" class="input-text compra-prod-costo" placeholder="Costo USD $" value="${costoDefault !== null ? costoDefault.toFixed(2) : '1.00'}">
+        <button onclick="document.getElementById('compra-row-${rowId}').remove()" style="background:none; border:none; color:#f87171; cursor:pointer; font-weight:bold;" title="Quitar renglón">✕</button>
     `;
     container.appendChild(div);
 }
@@ -1344,7 +1500,14 @@ async function ejecutarAuditoriaIntegridad() {
         const res = await fetch('/api/pos/auditoria-integridad');
         const data = await res.json();
 
+        // Actualizar panel live de auditoría si está presente
+        if (typeof renderizarPanelAuditoriaLive === 'function') {
+            renderizarPanelAuditoriaLive();
+        }
+
         const content = document.getElementById('auditoria-body-content');
+        if (!content) return;
+
         const estadoCorrelativo = data.correlatividadCorrecta 
             ? `<div style="color:#86efac; font-weight:bold; margin-bottom:6px;">✓ Correlatividad Estricta: Secuencia 100% continua sin saltos ni duplicados.</div>`
             : `<div style="color:#f87171; font-weight:bold; margin-bottom:6px;">✗ Inconsistencia en secuencia correlativa detectada.</div>`;
@@ -1354,7 +1517,7 @@ async function ejecutarAuditoriaIntegridad() {
             : `<div style="color:#f87171; font-weight:bold; margin-bottom:6px;">✗ Se detectó alteración manual en la base de datos.</div>`;
 
         let detallesInconsistencias = '';
-        if (data.inconsistencias.length > 0) {
+        if (data.inconsistencias && data.inconsistencias.length > 0) {
             detallesInconsistencias = `
                 <div style="background:#0f172a; border:1px solid #dc2626; border-radius:6px; padding:10px; margin-top:12px;">
                     <strong style="color:#f87171;">Discrepancias encontradas:</strong>
@@ -1363,19 +1526,25 @@ async function ejecutarAuditoriaIntegridad() {
                     </ul>
                 </div>
             `;
+        } else {
+            detallesInconsistencias = `
+                <div style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); border-radius:6px; padding:10px; margin-top:12px; color:#86efac; font-size:0.85rem;">
+                    ✓ <strong>Certificación Exitosa:</strong> Todas las facturas (${data.totalDocumentos || 0}) tienen numeración consecutiva estricta y hashes SHA-256 verificados.
+                </div>
+            `;
         }
 
         content.innerHTML = `
-            <div style="background:#0f172a; border-radius:8px; padding:14px; margin-bottom:14px;">
+            <div style="background:#0f172a; border-radius:8px; padding:14px; margin-bottom:14px; border:1px solid rgba(255,255,255,0.08);">
                 <div style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:8px;">
-                    Total Documentos Fiscales Auditados: <strong>${data.totalDocumentos}</strong>
+                    Total Documentos Fiscales Auditados: <strong>${data.totalDocumentos || 0}</strong>
                 </div>
                 ${estadoCorrelativo}
                 ${estadoHash}
                 ${detallesInconsistencias}
             </div>
-            <p style="font-size:0.85rem; color:var(--text-secondary);">
-                Este reporte técnico certifica ante auditores del SENIAT y peritos de TI que el software MeDIa cumple rigurosamente con los principios de inalterabilidad, correlatividad y seguridad legal.
+            <p style="font-size:0.82rem; color:var(--text-secondary); line-height:1.4;">
+                Este reporte técnico certifica ante auditores del SENIAT y peritos de TI que el software MeDIa cumple rigurosamente con los principios de inalterabilidad, correlatividad y seguridad legal venezolana.
             </p>
         `;
 

@@ -338,7 +338,16 @@ const server = http.createServer(async (req, res) => {
         let filePath = path.join(PUBLIC_DIR, pathname);
 
         if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
-            filePath = path.join(PUBLIC_DIR, 'admin.html');
+            if (pathname.startsWith('/img/products/')) {
+                const placeholder = path.join(PUBLIC_DIR, 'img', 'products', 'placeholder.svg');
+                filePath = fs.existsSync(placeholder) ? placeholder : path.join(PUBLIC_DIR, 'admin.html');
+            } else if (pathname.startsWith('/css/') || pathname.startsWith('/js/')) {
+                res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+                res.end("Archivo estático no encontrado");
+                return;
+            } else {
+                filePath = path.join(PUBLIC_DIR, 'admin.html');
+            }
         }
 
         const ext = path.extname(filePath).toLowerCase();

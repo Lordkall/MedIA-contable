@@ -127,10 +127,10 @@ class CorrelativoEngine {
             datosFactura.fecha,
             datosFactura.hora,
             datosFactura.cliente_rif,
-            datosFactura.total_venta_ves.toFixed(2),
-            datosFactura.monto_igtf_ves.toFixed(2),
-            datosFactura.total_final_con_igtf_ves.toFixed(2),
-            datosFactura.tasa_bcv_snapshot.toFixed(4)
+            Number(datosFactura.total_venta_ves || 0).toFixed(2),
+            Number(datosFactura.monto_igtf_ves || 0).toFixed(2),
+            Number(datosFactura.total_final_con_igtf_ves || 0).toFixed(2),
+            Number(datosFactura.tasa_bcv_snapshot || 0).toFixed(4)
         ].join('|');
 
         return crypto.createHash('sha256').update(payload).digest('hex');

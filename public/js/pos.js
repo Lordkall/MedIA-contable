@@ -119,8 +119,10 @@ async function cargarSesionCaja() {
 async function cargarCategorias() {
     try {
         const res = await fetch('/api/inventario/categorias');
-        state.categorias = await res.json();
+        const data = await res.json();
+        state.categorias = Array.isArray(data) ? data : [];
         const container = document.getElementById('category-pills-container');
+        if (!container) return;
         container.innerHTML = `<button class="pill-btn active" onclick="filtrarCategoria(null, this)">Todos</button>`;
         state.categorias.forEach(cat => {
             let label = cat.nombre;
@@ -131,7 +133,7 @@ async function cargarCategorias() {
             else if (cat.codigo === 'MOTO') label = 'Motor & Carburador';
             else if (cat.codigo === 'NEUM') label = 'Cauchos & Tripas';
             else if (cat.codigo === 'ACCE') label = 'Cascos & Accesorios';
-            else label = cat.nombre.replace(/,/g, '').split(' ')[0];
+            else label = (cat.nombre || '').replace(/,/g, '').split(' ')[0];
 
             container.innerHTML += `<button class="pill-btn" onclick="filtrarCategoria(${cat.id}, this)">${label}</button>`;
         });
@@ -222,11 +224,16 @@ function poblarCamposModalCliente(cliente, esRegistrado) {
     if (!cliente) return;
     if (document.getElementById('modal-cli-tipo')) document.getElementById('modal-cli-tipo').value = cliente.tipo_documento || 'V';
     if (document.getElementById('modal-cli-num')) document.getElementById('modal-cli-num').value = cliente.numero_documento || '';
-    if (document.getElementById('modal-cli-dig')) document.getElementById('modal-cli-dig').value = (cliente.digito_verificador !== undefined && cliente.digito_verificador !== null) ? cliente.digito_verificador : '';
+    if (document.getElementById('modal-cli-dig')) {
+        const dig = (cliente.digito_verificador !== undefined && cliente.digito_verificador !== null && cliente.digito_verificador !== '')
+            ? cliente.digito_verificador
+            : calcularDigitoSENIATFront(cliente.tipo_documento || 'V', cliente.numero_documento || '0');
+        document.getElementById('modal-cli-dig').value = dig;
+    }
     if (document.getElementById('modal-cli-razon')) document.getElementById('modal-cli-razon').value = cliente.razon_social || '';
-    if (document.getElementById('modal-cli-dir')) document.getElementById('modal-cli-dir').value = cliente.direccion || '';
+    if (document.getElementById('modal-cli-dir')) document.getElementById('modal-cli-dir').value = cliente.direccion || 'Ciudad';
     if (document.getElementById('modal-cli-tlf')) document.getElementById('modal-cli-tlf').value = cliente.telefono || '';
-    if (document.getElementById('modal-cli-contrib')) document.getElementById('modal-cli-contrib').value = cliente.tipo_contribuyente || 'NO_CONTRIBUYENTE';
+    if (document.getElementById('modal-cli-contrib')) document.getElementById('modal-cli-contrib').value = cliente.tipo_contribuyente || 'ORDINARIO';
 
     const badge = document.getElementById('modal-cli-badge');
     if (badge) {
@@ -242,10 +249,110 @@ function poblarCamposModalCliente(cliente, esRegistrado) {
             badge.style.borderColor = 'rgba(16, 185, 129, 0.4)';
         } else {
             badge.innerText = '✎ Nuevo Cliente';
-            badge.style.color = '#93c5fd';
-            badge.style.background = 'rgba(59, 130, 246, 0.2)';
-            badge.style.borderColor = 'rgba(59, 130, 246, 0.4)';
+            badge.style.color = '#38bdf8';
+            badge.style.background = 'rgba(56, 189, 248, 0.15)';
+            badge.style.borderColor = 'rgba(56, 189, 248, 0.35)';
         }
+    }
+}
+
+function calcularDigitoSENIATFront(tipo, num) {
+    const prefijos = { 'V': 1, 'E': 2, 'J': 3, 'P': 4, 'G': 5, 'C': 6 };
+    const factores = [4, 3, 2, 7, 6, 5, 4, 3, 2];
+    const cleanNum = String(num || '').replace(/[^0-9]/g, '').padStart(8, '0').slice(-8);
+    const pref = prefijos[(tipo || 'V').toUpperCase()] !== undefined ? prefijos[(tipo || 'V').toUpperCase()] : 1;
+    let suma = pref * factores[0];
+    for (let i = 0; i < 8; i++) {
+        suma += parseInt(cleanNum[i], 10) * factores[i + 1];
+    }
+    const resto = suma % 11;
+    let digito = 11 - resto;
+    if (digito >= 10) digito = 0;
+    return digito;
+}
+
+function limpiarFormularioNuevoClientePOS() {
+    const searchInput = document.getElementById('modal-client-search');
+    if (searchInput) searchInput.value = '';
+
+    const tipoEl = document.getElementById('modal-cli-tipo');
+    const numEl = document.getElementById('modal-cli-num');
+    const digEl = document.getElementById('modal-cli-dig');
+    const razonEl = document.getElementById('modal-cli-razon');
+    const dirEl = document.getElementById('modal-cli-dir');
+    const tlfEl = document.getElementById('modal-cli-tlf');
+    const contribEl = document.getElementById('modal-cli-contrib');
+
+    if (tipoEl) tipoEl.value = 'V';
+    if (numEl) numEl.value = '';
+    if (digEl) digEl.value = '';
+    if (razonEl) {
+        razonEl.value = '';
+        razonEl.placeholder = 'Nombre del cliente o Razón Social';
+    }
+    if (dirEl) dirEl.value = 'Ciudad';
+    if (tlfEl) tlfEl.value = '';
+    if (contribEl) contribEl.value = 'ORDINARIO';
+
+    const badge = document.getElementById('modal-cli-badge');
+    if (badge) {
+        badge.innerText = '✎ Anotando Nuevo Cliente';
+        badge.style.color = '#38bdf8';
+        badge.style.background = 'rgba(56, 189, 248, 0.15)';
+        badge.style.borderColor = 'rgba(56, 189, 248, 0.35)';
+    }
+
+    if (numEl) setTimeout(() => numEl.focus(), 60);
+}
+
+function alCambiarTipoOCedula() {
+    const tipoEl = document.getElementById('modal-cli-tipo');
+    const numEl = document.getElementById('modal-cli-num');
+    const digEl = document.getElementById('modal-cli-dig');
+    const razonEl = document.getElementById('modal-cli-razon');
+    const badge = document.getElementById('modal-cli-badge');
+
+    const tipo = tipoEl ? tipoEl.value : 'V';
+    const num = numEl ? numEl.value.trim().replace(/[^0-9]/g, '') : '';
+
+    if (!num) {
+        if (digEl) digEl.value = '';
+        return;
+    }
+
+    if (digEl) {
+        digEl.value = String(calcularDigitoSENIATFront(tipo, num));
+    }
+
+    const match = state.clientes.find(c => {
+        const cNum = (c.numero_documento || '').replace(/[^0-9]/g, '');
+        return cNum === num && (c.tipo_documento || 'V') === tipo;
+    });
+
+    if (match && match.numero_documento !== '00000000') {
+        poblarCamposModalCliente(match, true);
+    } else {
+        if (badge) {
+            badge.innerText = '✎ Nuevo Cliente (Por Registrar)';
+            badge.style.color = '#38bdf8';
+            badge.style.background = 'rgba(56, 189, 248, 0.15)';
+            badge.style.borderColor = 'rgba(56, 189, 248, 0.35)';
+        }
+        if (razonEl && razonEl.value.includes('CONSUMIDOR FINAL')) {
+            razonEl.value = '';
+            razonEl.placeholder = 'Nombre o Razón Social';
+        }
+    }
+}
+
+function alEscribirNombreCliente() {
+    const badge = document.getElementById('modal-cli-badge');
+    const num = (document.getElementById('modal-cli-num')?.value || '').trim();
+    if (badge && num !== '00000000') {
+        badge.innerText = '✎ Nuevo Cliente';
+        badge.style.color = '#38bdf8';
+        badge.style.background = 'rgba(56, 189, 248, 0.15)';
+        badge.style.borderColor = 'rgba(56, 189, 248, 0.35)';
     }
 }
 
@@ -270,12 +377,15 @@ function alBuscarClienteEnModal(val) {
         else if (cleanUpper.startsWith('G') && tipoEl) tipoEl.value = 'G';
         else if (cleanUpper.startsWith('E') && tipoEl) tipoEl.value = 'E';
 
+        const tipo = tipoEl ? tipoEl.value : 'V';
+        const calcDig = cleanNum ? calcularDigitoSENIATFront(tipo, cleanNum) : '';
+
         poblarCamposModalCliente({
-            tipo_documento: (tipoEl ? tipoEl.value : 'V'),
+            tipo_documento: tipo,
             numero_documento: cleanNum || term,
-            digito_verificador: '',
+            digito_verificador: calcDig,
             razon_social: '',
-            direccion: '',
+            direccion: 'Ciudad',
             telefono: '',
             tipo_contribuyente: 'ORDINARIO'
         }, false);
@@ -299,28 +409,52 @@ async function confirmarClienteYPasarAlPOS() {
 
     const tipo = (tipoEl ? tipoEl.value : 'V').toUpperCase();
     const num = (numEl ? numEl.value : '').trim().replace(/[^0-9]/g, '');
-    const dig = (digEl ? digEl.value : '').trim();
+    let dig = (digEl ? digEl.value : '').trim();
     const razon = (razonEl ? razonEl.value : '').trim();
     const dir = (dirEl ? dirEl.value : '').trim();
     const tlf = (tlfEl ? tlfEl.value : '').trim();
     const contrib = contribEl ? contribEl.value : 'ORDINARIO';
 
-    if (!num || num === '00000000' || !razon || razon.toUpperCase().includes('CONSUMIDOR FINAL')) {
+    // Si es Consumidor Final explícito
+    if (num === '00000000' || razon.toUpperCase().includes('CONSUMIDOR FINAL')) {
         seleccionarConsumidorFinal();
         cerrarModalClientePOS();
         mostrarToast('Venta asignada a Consumidor Final', 'info');
         return;
     }
 
-    const match = state.clientes.find(c => (c.numero_documento || '').replace(/[^0-9]/g, '') === num);
+    if (!num) {
+        mostrarToast('Por favor ingrese el número de Cédula o RIF del cliente', 'warning');
+        if (numEl) numEl.focus();
+        return;
+    }
+
+    if (!razon) {
+        mostrarToast('Por favor ingrese el Nombre o Razón Social del cliente', 'warning');
+        if (razonEl) razonEl.focus();
+        return;
+    }
+
+    if (!dig) {
+        dig = String(calcularDigitoSENIATFront(tipo, num));
+        if (digEl) digEl.value = dig;
+    }
+
+    // Verificar si ya existe en la memoria
+    const match = state.clientes.find(c => {
+        const cNum = (c.numero_documento || '').replace(/[^0-9]/g, '');
+        return cNum === num && (c.tipo_documento || 'V') === tipo;
+    });
+
     if (match) {
         state.clienteSeleccionadoId = match.id;
         actualizarBarraClienteUI(match);
         cerrarModalClientePOS();
-        mostrarToast(`Cliente seleccionado: ${match.razon_social}`, 'success');
+        mostrarToast(`✓ Cliente asignado: ${match.razon_social} (${match.rif_completo})`, 'success');
         return;
     }
 
+    // Registrar nuevo cliente en la base de datos
     try {
         const res = await fetch('/api/terceros/clientes', {
             method: 'POST',
@@ -335,22 +469,88 @@ async function confirmarClienteYPasarAlPOS() {
                 tipo_contribuyente: contrib
             })
         });
+
         const data = await res.json();
         if (res.ok && data && data.id) {
-            state.clientes.push(data);
+            const idx = state.clientes.findIndex(c => c.id === data.id);
+            if (idx >= 0) state.clientes[idx] = data;
+            else state.clientes.push(data);
+
             state.clienteSeleccionadoId = data.id;
             actualizarBarraClienteUI(data);
             cerrarModalClientePOS();
-            mostrarToast(`✓ Cliente guardado: ${razon}`, 'success');
+            mostrarToast(`✓ Cliente registrado: ${data.razon_social} (${data.rif_completo})`, 'success');
         } else {
-            console.warn('Aviso al registrar cliente:', data.mensaje);
-            seleccionarConsumidorFinal();
-            cerrarModalClientePOS();
+            mostrarToast(`No se pudo registrar: ${data.mensaje || 'Revise los datos del cliente'}`, 'error');
         }
     } catch (e) {
         console.error('Error registrando cliente:', e);
-        cerrarModalClientePOS();
+        mostrarToast('Error de conexión al registrar cliente', 'error');
     }
+}
+
+function imprimirTicketFiscalTermico() {
+    const ticketText = state.ultimoTicket || document.getElementById('ticket-preview-content')?.innerText;
+    if (!ticketText) {
+        mostrarToast("No hay ticket fiscal emitido para imprimir.", "warning");
+        return;
+    }
+
+    const printFrame = document.createElement('iframe');
+    printFrame.style.position = 'fixed';
+    printFrame.style.right = '0';
+    printFrame.style.bottom = '0';
+    printFrame.style.width = '0';
+    printFrame.style.height = '0';
+    printFrame.style.border = '0';
+    document.body.appendChild(printFrame);
+
+    const doc = printFrame.contentWindow.document;
+    doc.open();
+    doc.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <title>Ticket Fiscal 80mm</title>
+            <style>
+                @page {
+                    size: 80mm auto;
+                    margin: 0mm;
+                }
+                * {
+                    box-sizing: border-box;
+                    margin: 0;
+                    padding: 0;
+                }
+                body {
+                    width: 72mm;
+                    margin: 0 auto;
+                    padding: 3mm 1mm;
+                    font-family: 'Courier New', Courier, monospace;
+                    font-size: 11px;
+                    line-height: 1.25;
+                    color: #000000;
+                    background: #ffffff;
+                    white-space: pre-wrap;
+                    word-break: break-word;
+                }
+            </style>
+        </head>
+        <body>${ticketText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</body>
+        </html>
+    `);
+    doc.close();
+
+    setTimeout(() => {
+        try {
+            printFrame.contentWindow.focus();
+            printFrame.contentWindow.print();
+        } catch(e) {
+            console.error("Error al imprimir ticket térmico", e);
+        }
+        setTimeout(() => printFrame.remove(), 1200);
+    }, 250);
 }
 
 async function asegurarClienteSeleccionado() {
@@ -400,56 +600,74 @@ function buscarProductosManual() {
 // ==========================================
 function renderizarCatalogo() {
     const container = document.getElementById('pos-products-container');
-    if (!state.catalogo || state.catalogo.length === 0) {
-        container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 40px;">No se encontraron productos coincidentes</div>`;
+    if (!container) return;
+
+    if (!Array.isArray(state.catalogo) || state.catalogo.length === 0) {
+        container.innerHTML = `
+            <div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 50px 20px;">
+                <svg style="width:40px; height:40px; stroke:var(--text-muted); stroke-width:1.5; fill:none; margin: 0 auto 12px; display:block; opacity:0.6;" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <div style="font-size:0.95rem; font-weight:600; margin-bottom:8px;">No se encontraron repuestos en el catálogo</div>
+                <button type="button" onclick="cargarCatalogo()" class="btn-glass" style="font-size:0.78rem; padding:5px 14px; margin-top:8px;">Recargar Catálogo</button>
+            </div>
+        `;
         return;
     }
 
     container.innerHTML = state.catalogo.map(prod => {
-        const stockAlerta = prod.stock_actual <= prod.stock_minimo ? 'color:#f87171;' : 'color:#86efac;';
-        const imgUrl = prod.imagen_url || '/img/products/placeholder.svg';
-        const catTintClass = `cat-tint-${prod.categoria_id || 1}`;
-        const costoUsd = prod.costo_usd !== undefined ? Number(prod.costo_usd) : 0;
-        const costoVes = prod.costo_ves !== undefined ? Number(prod.costo_ves) : Math.round((costoUsd * state.tasaBcv) * 100) / 100;
+        try {
+            const stockActual = Number(prod.stock_actual || 0);
+            const stockMinimo = Number(prod.stock_minimo || 5);
+            const stockAlerta = stockActual <= stockMinimo ? 'color:#f87171;' : 'color:#86efac;';
+            const imgUrl = prod.imagen_url || '/img/products/placeholder.svg';
+            const catTintClass = `cat-tint-${prod.categoria_id || 1}`;
+            const costoUsd = Number(prod.costo_usd || 0);
+            const precioUsd = Number(prod.precio_usd || 0);
+            const tasaActual = Number(state.tasaBcv || 900);
+            const precioVes = prod.precio_ves !== undefined && prod.precio_ves !== null ? Number(prod.precio_ves) : Math.round(precioUsd * tasaActual * 100) / 100;
+            const costoVes = prod.costo_ves !== undefined && prod.costo_ves !== null ? Number(prod.costo_ves) : Math.round(costoUsd * tasaActual * 100) / 100;
 
-        return `
-            <div class="product-card ${catTintClass}" onclick="agregarAlCarritoPorId(${prod.id})">
-                <!-- Barra Superior de Identificación Fiscal y Código -->
-                <div class="prod-card-top-bar">
-                    <span class="prod-tag tag-${prod.alicuota_iva}">${getNombreAlicuota(prod.alicuota_iva)}</span>
-                    <span class="prod-barcode-badge">
-                        <svg style="width:11px; height:11px; stroke:currentColor; stroke-width:2.2; fill:none; opacity:0.8;" viewBox="0 0 24 24"><path d="M3 5v14M8 5v14M12 5v14M17 5v14M21 5v14"/></svg>
-                        <span>${prod.codigo_barra}</span>
-                    </span>
-                </div>
-
-                <!-- Foto del Producto (Garantizada Visible con 110px de Alto) -->
-                <div class="product-img-box">
-                    <img src="${imgUrl}" alt="${prod.descripcion}" class="product-img" onerror="this.onerror=null; this.src='/img/products/placeholder.svg';">
-                </div>
-
-                <!-- Título del Producto -->
-                <div>
-                    <div class="prod-desc" title="${prod.descripcion}">${prod.descripcion}</div>
-                </div>
-
-                <!-- Precios, Costo y Stock -->
-                <div>
-                    <div class="prod-prices">
-                        <span class="price-ves">Bs. ${prod.precio_ves.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
-                        <span class="price-usd">$ ${prod.precio_usd.toFixed(2)}</span>
+            return `
+                <div class="product-card ${catTintClass}" onclick="agregarAlCarritoPorId(${prod.id})">
+                    <!-- Barra Superior de Identificación Fiscal y Código -->
+                    <div class="prod-card-top-bar">
+                        <span class="prod-tag tag-${prod.alicuota_iva || 'G'}">${getNombreAlicuota(prod.alicuota_iva || 'G')}</span>
+                        <span class="prod-barcode-badge">
+                            <svg style="width:11px; height:11px; stroke:currentColor; stroke-width:2.2; fill:none; opacity:0.8;" viewBox="0 0 24 24"><path d="M3 5v14M8 5v14M12 5v14M17 5v14M21 5v14"/></svg>
+                            <span>${prod.codigo_barra || '--'}</span>
+                        </span>
                     </div>
-                    <div class="prod-cost-row">
-                        <span>Costo Ref: <strong class="prod-cost-val">$ ${costoUsd.toFixed(2)}</strong></span>
-                        <span>(Bs. ${costoVes.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})})</span>
+
+                    <!-- Foto del Producto (Garantizada Visible con 110px de Alto) -->
+                    <div class="product-img-box">
+                        <img src="${imgUrl}" alt="${prod.descripcion}" class="product-img" onerror="this.onerror=null; this.src='/img/products/placeholder.svg';">
                     </div>
-                    <div class="prod-footer">
-                        <span class="prod-stock">Stock: <strong style="${stockAlerta}">${prod.stock_actual}</strong> ${prod.unidad_medida}</span>
-                        <span style="font-size: 0.74rem; color: #60a5fa; font-weight:800;">+ Agregar</span>
+
+                    <!-- Título del Producto -->
+                    <div>
+                        <div class="prod-desc" title="${prod.descripcion}">${prod.descripcion}</div>
+                    </div>
+
+                    <!-- Precios, Costo y Stock -->
+                    <div>
+                        <div class="prod-prices">
+                            <span class="price-ves">Bs. ${precioVes.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+                            <span class="price-usd">$ ${precioUsd.toFixed(2)}</span>
+                        </div>
+                        <div class="prod-cost-row">
+                            <span>Costo Ref: <strong class="prod-cost-val">$ ${costoUsd.toFixed(2)}</strong></span>
+                            <span>(Bs. ${costoVes.toLocaleString('es-VE', {minimumFractionDigits:2, maximumFractionDigits:2})})</span>
+                        </div>
+                        <div class="prod-footer">
+                            <span class="prod-stock">Stock: <strong style="${stockAlerta}">${stockActual}</strong> ${prod.unidad_medida || 'UNID'}</span>
+                            <span style="font-size: 0.74rem; color: #60a5fa; font-weight:800;">+ Agregar</span>
+                        </div>
                     </div>
                 </div>
-            </div>
-        `;
+            `;
+        } catch(e) {
+            console.error("Error al renderizar tarjeta de producto", prod, e);
+            return '';
+        }
     }).join('');
 }
 
@@ -621,12 +839,13 @@ function agregarAlCarrito(prod) {
             alicuota_iva: prod.alicuota_iva,
             precio_usd: prod.precio_usd,
             precio_ves: prod.precio_ves,
+            imagen_url: prod.imagen_url || '/img/products/placeholder.svg',
             cantidad: 1,
             stock_max: prod.stock_actual
         });
     }
 
-    actualizarCarritoUI();
+    actualizarCarritoUI(true);
     mostrarToast(`+ ${prod.descripcion}`, 'info');
 }
 
@@ -642,29 +861,29 @@ function cambiarCantidad(prodId, delta) {
     } else {
         item.cantidad = nuevaCant;
     }
-    actualizarCarritoUI();
+    actualizarCarritoUI(false);
 }
 
 function eliminarDelCarrito(prodId) {
     state.carrito = state.carrito.filter(it => it.producto_id !== prodId);
-    actualizarCarritoUI();
+    actualizarCarritoUI(false);
 }
 
 function limpiarCarrito() {
     if (state.carrito.length === 0) return;
     state.carrito = [];
-    actualizarCarritoUI();
+    actualizarCarritoUI(false);
     mostrarToast("Ticket cancelado y vaciado.", 'info');
 }
 
-function actualizarCarritoUI() {
+function actualizarCarritoUI(scrollDown = false) {
     const listContainer = document.getElementById('cart-items-list');
     const itemsCountEl = document.getElementById('cart-items-count');
     const btnCobrar = document.getElementById('btn-cobrar');
 
     if (state.carrito.length === 0) {
         listContainer.innerHTML = `
-            <div style="text-align: center; color: var(--text-muted); margin-top: 60px;">
+            <div style="text-align: center; color: var(--text-muted); margin-top: 50px;">
                 <svg style="width:42px; height:42px; stroke:var(--text-muted); stroke-width:1.5; fill:none; margin: 0 auto 12px; display:block;" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
                 <span>Escanee o haga clic en un producto para comenzar</span>
             </div>
@@ -681,11 +900,15 @@ function actualizarCarritoUI() {
     listContainer.innerHTML = state.carrito.map(it => {
         cantTotal += it.cantidad;
         const totalItemVes = it.cantidad * it.precio_ves;
+        const img = it.imagen_url || '/img/products/placeholder.svg';
         return `
             <div class="cart-item">
                 <div class="cart-item-row-top">
-                    <div class="cart-item-title">${it.descripcion}</div>
-                    <button onclick="eliminarDelCarrito(${it.producto_id})" style="background:none; border:none; color:#f87171; cursor:pointer; padding:2px;" title="Quitar ítem">
+                    <div style="display:flex; align-items:center; gap:8px; min-width:0; flex:1;">
+                        <img src="${img}" onerror="this.onerror=null; this.src='/img/products/placeholder.svg';" style="width:28px; height:28px; object-fit:contain; border-radius:6px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.08); padding:2px; flex-shrink:0;">
+                        <div class="cart-item-title" title="${it.descripcion}" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${it.descripcion}</div>
+                    </div>
+                    <button onclick="eliminarDelCarrito(${it.producto_id})" style="background:none; border:none; color:#f87171; cursor:pointer; padding:2px; margin-left:6px;" title="Quitar ítem">
                         <svg style="width:14px; height:14px; stroke:#f87171; stroke-width:2; fill:none;" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                     </button>
                 </div>
@@ -706,6 +929,12 @@ function actualizarCarritoUI() {
 
     itemsCountEl.innerText = cantTotal;
     recalcularTotales(state.carrito);
+
+    if (scrollDown) {
+        setTimeout(() => {
+            listContainer.scrollTop = listContainer.scrollHeight;
+        }, 40);
+    }
 }
 
 function recalcularTotales(items) {

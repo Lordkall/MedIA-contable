@@ -24,22 +24,22 @@ console.log('Tasa BCV Activa:', tasaActual.tasa, 'Bs/USD');
 console.log('\n--- 3. PROBANDO INVENTARIO Y CATALOGO BIMONETARIO ---');
 const prods = InventarioService.getProductos();
 console.log(`Total productos cargados: ${prods.length}`);
-const harina = prods.find(p => p.descripcion.includes('Harina PAN'));
-console.log(`Producto: ${harina.descripcion} | Alicuota: ${harina.alicuota_iva} | Precio USD: $${harina.precio_usd} | Precio VES: Bs. ${harina.precio_ves}`);
+const repuesto1 = prods.find(p => p.descripcion.includes('Motul')) || prods[0];
+console.log(`Producto: ${repuesto1.descripcion} | Alicuota: ${repuesto1.alicuota_iva} | Precio USD: $${repuesto1.precio_usd} | Precio VES: Bs. ${repuesto1.precio_ves}`);
 
 console.log('\n--- 4. PROBANDO TRANSACCION DE VENTA CON IGTF (3%) ---');
-// Venta de 2 Harina PAN (Exento) + 1 Coca-Cola (General 16%)
-const coca = prods.find(p => p.descripcion.includes('Coca-Cola'));
+// Venta de repuestos de moto
+const repuesto2 = prods.find(p => p.descripcion.includes('Bujía')) || prods[1];
 
 const ventaTest = PosService.procesarVenta({
     cliente_id: 1, // Consumidor Final
     items: [
-        { producto_id: harina.id, cantidad: 2 },
-        { producto_id: coca.id, cantidad: 1 }
+        { producto_id: repuesto1.id, cantidad: 1 },
+        { producto_id: repuesto2.id, cantidad: 1 }
     ],
     pagos: [
         // Pago en divisa que cubre la totalidad con IGTF
-        { metodo_pago: 'EFECTIVO_USD', moneda: 'USD', monto_original: 5.00 }
+        { metodo_pago: 'EFECTIVO_USD', moneda: 'USD', monto_original: 15.00 }
     ]
 });
 

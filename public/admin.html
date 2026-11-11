@@ -875,17 +875,84 @@
             </div>
 
             <div style="border-top: 1px solid var(--glass-border); padding-top: 12px; margin-top: 12px;">
-                <strong style="font-size: 0.9rem;">Productos a Ingresar:</strong>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+                    <strong style="font-size: 0.9rem;">Productos a Ingresar:</strong>
+                    <div style="display:flex; gap:8px;">
+                        <button type="button" onclick="abrirSubmodalCrearProductoEnCompra()" class="btn-glass" style="padding: 5px 12px; font-size: 0.78rem; color:#38bdf8; border-color:rgba(56,189,248,0.4);" title="Si el repuesto facturado no existe aún en el inventario, regístralo aquí de una vez">
+                            + Crear Nuevo Producto
+                        </button>
+                        <button type="button" onclick="agregarRenglonCompra()" class="btn-glass" style="padding: 5px 12px; font-size: 0.78rem;">
+                            + Agregar Ítem
+                        </button>
+                    </div>
+                </div>
                 <div id="compra-items-list" style="margin-top: 8px;"></div>
-                <button onclick="agregarRenglonCompra()" class="btn-glass" style="padding: 6px 12px; font-size: 0.8rem; margin-top: 6px;">
-                    + Agregar Ítem
-                </button>
             </div>
 
             <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
                 <button onclick="cerrarModalCompra()" class="btn-glass">Cancelar</button>
                 <button onclick="guardarCompra()" class="btn-glass btn-glass-success">Registrar y Alimentar Stock</button>
             </div>
+        </div>
+    </div>
+
+    <!-- SUBMODAL CREAR PRODUCTO AL VUELO DESDE COMPRAS -->
+    <div id="modal-sub-producto-compra" class="modal-overlay" style="display: none; z-index: 10002;">
+        <div class="modal-glass-content" style="max-width: 520px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--glass-border); padding-bottom:10px; margin-bottom:14px;">
+                <h3 style="font-size:1.1rem; font-weight:800; color:#ffffff; margin:0;">+ Registrar Nuevo Repuesto en Inventario</h3>
+                <button type="button" onclick="cerrarSubmodalCrearProductoEnCompra()" style="background:none; border:none; color:var(--text-muted); cursor:pointer;">
+                    <svg style="width:18px; height:18px; stroke:currentColor; stroke-width:2; fill:none;" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <p style="font-size:0.8rem; color:#94a3b8; margin-top:0; margin-bottom:12px;">
+                El producto se creará en el catálogo (stock inicial 0) y se agregará inmediatamente a la factura para que ingresen las unidades compradas.
+            </p>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                <div>
+                    <label style="display:block; font-size:0.75rem; color:var(--text-muted); margin-bottom:4px;">Código de Barra / Ref:</label>
+                    <input type="text" class="glass-input" id="subprod-codigo" placeholder="Ej: 7591009999" style="width:100%;">
+                </div>
+                <div>
+                    <label style="display:block; font-size:0.75rem; color:var(--text-muted); margin-bottom:4px;">Categoría:</label>
+                    <select class="glass-input" id="subprod-categoria" style="width:100%;"></select>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 10px;">
+                <label style="display:block; font-size:0.75rem; color:var(--text-muted); margin-bottom:4px;">Descripción del Repuesto:</label>
+                <input type="text" class="glass-input" id="subprod-descripcion" placeholder="Ej: Amortiguador Trasero Bera SBR 150" style="width:100%; font-weight:600;">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 16px;">
+                <div>
+                    <label style="display:block; font-size:0.75rem; color:var(--text-muted); margin-bottom:4px;">Costo Compra USD ($):</label>
+                    <input type="number" step="0.01" class="glass-input" id="subprod-costo" placeholder="10.00" style="width:100%;">
+                </div>
+                <div>
+                    <label style="display:block; font-size:0.75rem; color:var(--text-muted); margin-bottom:4px;">Precio Venta USD ($):</label>
+                    <input type="number" step="0.01" class="glass-input" id="subprod-precio" placeholder="15.00" style="width:100%;">
+                </div>
+                <div>
+                    <label style="display:block; font-size:0.75rem; color:var(--text-muted); margin-bottom:4px;">Alícuota IVA:</label>
+                    <select class="glass-input" id="subprod-iva" style="width:100%;">
+                        <option value="G">General 16%</option>
+                        <option value="E">Exento 0%</option>
+                        <option value="R">Reducido 8%</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button type="button" onclick="cerrarSubmodalCrearProductoEnCompra()" class="btn-glass">Cancelar</button>
+                <button type="button" onclick="guardarSubproductoEnCompra()" class="btn-glass btn-glass-primary" style="font-weight:700;">
+                    ✓ Guardar e Incluir en Compra
+                </button>
+            </div>
+        </div>
+    </div>
         </div>
     </div>
 
@@ -1065,7 +1132,11 @@
             
             <div class="ticket-preview" id="admin-ticket-preview-content" style="background:#090d16; color:#86efac; font-family:'Courier New', monospace; padding:16px; border-radius:8px; font-size:0.8rem; line-height:1.4; max-height:360px; overflow-y:auto; white-space:pre-wrap; border:1px solid rgba(56,189,248,0.2);"></div>
             
-            <div style="display: flex; justify-content: space-between; gap: 12px; margin-top: 18px;">
+            <div style="display: flex; justify-content: space-between; gap: 10px; margin-top: 18px;">
+                <button onclick="imprimirTicketFiscalAdminTermico()" class="btn-glass" style="flex:1; justify-content:center; display:inline-flex; align-items:center; gap:6px;" title="Imprimir en impresora térmica de 80mm">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                    <span>Imprimir (80mm)</span>
+                </button>
                 <button onclick="copiarTicketAdminTexto()" class="btn-glass" style="flex:1; justify-content:center; display:inline-flex; align-items:center; gap:6px;">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                     <span>Copiar Ticket</span>

@@ -71,8 +71,28 @@ function validarRIF(rifCompleto) {
     };
 }
 
+/**
+ * Calcula automáticamente el dígito verificador del SENIAT según el algoritmo oficial Módulo 11
+ */
+function calcularDigitoRIF(prefijo, numero) {
+    const prefijoChar = (prefijo || 'V').toUpperCase().trim();
+    const factorPrefijo = PREFIJOS[prefijoChar] !== undefined ? PREFIJOS[prefijoChar] : 1;
+    const cleanNum = String(numero || '').replace(/[^0-9]/g, '').padStart(8, '0').slice(-8);
+    
+    let suma = factorPrefijo * FACTORES[0];
+    for (let i = 0; i < 8; i++) {
+        suma += parseInt(cleanNum[i], 10) * FACTORES[i + 1];
+    }
+
+    const resto = suma % 11;
+    let digitoCalculado = 11 - resto;
+    if (digitoCalculado >= 10) digitoCalculado = 0;
+    return digitoCalculado;
+}
+
 module.exports = {
     validarRIF,
+    calcularDigitoRIF,
     normalizarRIF
 };
 

@@ -293,7 +293,7 @@
                 </button>
             </div>
             
-            <div style="text-align: center; color: #86efac; margin-bottom: 12px; font-weight: 600; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 6px;">
+            <div class="ticket-status-bar" style="text-align: center; color: #86efac; margin-bottom: 12px; font-weight: 600; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; gap: 6px;">
                 <span style="display:inline-block; width:6px; height:6px; background:#10b981; border-radius:50%; box-shadow:0 0 6px #10b981;"></span>
                 Impreso en Memoria Fiscal y Descontado de Inventario
             </div>
@@ -301,9 +301,9 @@
             <div class="ticket-preview" id="ticket-preview-content"></div>
 
             <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px;">
-                <button onclick="window.print()" class="btn-glass" title="Imprimir en ticketera térmica">
+                <button onclick="imprimirTicketFiscalTermico()" class="btn-glass" title="Imprimir en impresora térmica/fiscal de 80mm">
                     <svg style="width:14px; height:14px; stroke:currentColor; stroke-width:2; fill:none;" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-                    <span>Imprimir Ticket</span>
+                    <span>Imprimir Ticket (80mm)</span>
                 </button>
                 <button onclick="copiarTicketTexto()" class="btn-glass">Copiar Texto</button>
                 <button onclick="cerrarModalTicket()" class="btn-glass btn-glass-primary">Aceptar y Nueva Venta</button>
@@ -342,7 +342,12 @@
 
             <!-- Buscador Rápido por Cédula/RIF y Botón Consumidor Final -->
             <div style="background: rgba(11, 20, 39, 0.6); border: 1px solid var(--glass-border); border-radius: 12px; padding: 12px; margin-bottom: 14px;">
-                <div style="font-size: 0.76rem; color: var(--text-muted); margin-bottom: 6px; font-weight: 600;">BUSCADOR RÁPIDO:</div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
+                    <div style="font-size: 0.76rem; color: var(--text-muted); font-weight: 600;">BUSCADOR O REGISTRO:</div>
+                    <button type="button" onclick="limpiarFormularioNuevoClientePOS()" class="btn-glass" style="font-size: 0.74rem; padding: 3px 9px; color:#38bdf8; border-color:rgba(56,189,248,0.4);" title="Limpiar campos para escribir un nuevo cliente">
+                        + Anotar Nuevo Cliente
+                    </button>
+                </div>
                 <div style="display: flex; gap: 8px;">
                     <input type="text" id="modal-client-search" class="glass-input" 
                            placeholder="Escriba Cédula, RIF o Nombre para buscar..." 
@@ -358,16 +363,16 @@
 
             <!-- Ficha / Formulario del Cliente -->
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <span style="font-size: 0.76rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.6px;">Datos del Cliente</span>
+                <span style="font-size: 0.76rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.6px;">Datos Fiscales del Cliente</span>
                 <span id="modal-cli-badge" style="font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 6px; background: rgba(16, 185, 129, 0.2); color: #86efac; border: 1px solid rgba(16, 185, 129, 0.4);">
                     ✓ Consumidor Final
                 </span>
             </div>
 
-            <div style="display: grid; grid-template-columns: 80px 1fr 60px; gap: 8px; margin-bottom: 10px;">
+            <div style="display: grid; grid-template-columns: 80px 1fr 75px; gap: 8px; margin-bottom: 10px;">
                 <div>
                     <label style="display:block; font-size:0.75rem; color:var(--text-muted); margin-bottom:4px;">Tipo:</label>
-                    <select class="glass-input" id="modal-cli-tipo" style="width:100%; padding: 8px 6px; font-weight: 700;">
+                    <select class="glass-input" id="modal-cli-tipo" style="width:100%; padding: 8px 6px; font-weight: 700;" onchange="alCambiarTipoOCedula()">
                         <option value="V">V-</option>
                         <option value="J">J-</option>
                         <option value="E">E-</option>
@@ -377,17 +382,17 @@
                 </div>
                 <div>
                     <label style="display:block; font-size:0.75rem; color:var(--text-muted); margin-bottom:4px;">Cédula o RIF:</label>
-                    <input type="text" class="glass-input" id="modal-cli-num" placeholder="00000000" style="width:100%;">
+                    <input type="text" class="glass-input" id="modal-cli-num" placeholder="Ej: 14523891" style="width:100%; font-weight:700;" oninput="alCambiarTipoOCedula()">
                 </div>
                 <div>
-                    <label style="display:block; font-size:0.75rem; color:var(--text-muted); margin-bottom:4px;">Dígito:</label>
-                    <input type="text" class="glass-input" id="modal-cli-dig" placeholder="0" maxlength="2" style="width:100%; text-align:center;">
+                    <label style="display:block; font-size:0.75rem; color:var(--text-muted); margin-bottom:4px;" title="Dígito SENIAT Módulo 11 (Autocalculado)">Dígito:</label>
+                    <input type="text" class="glass-input" id="modal-cli-dig" placeholder="Auto" maxlength="2" style="width:100%; text-align:center; font-weight:700; color:#38bdf8;" title="Dígito verificador SENIAT (Se calcula automáticamente)">
                 </div>
             </div>
 
             <div style="margin-bottom: 10px;">
                 <label style="display:block; font-size:0.75rem; color:var(--text-muted); margin-bottom:4px;">Nombre / Razón Social Completa:</label>
-                <input type="text" class="glass-input" id="modal-cli-razon" placeholder="CONSUMIDOR FINAL / CONTADO" style="width:100%; font-weight: 600;">
+                <input type="text" class="glass-input" id="modal-cli-razon" placeholder="Nombre del cliente o Empresa" style="width:100%; font-weight: 600;" oninput="alEscribirNombreCliente()">
             </div>
 
             <div style="margin-bottom: 10px;">
