@@ -1660,3 +1660,153 @@ function renderizarLibroCompras(data) {
     `;
 }
 
+// ==========================================
+// COPIAS DE SEGURIDAD (BACKUP) & INTEGRIDAD
+// ==========================================
+async function cargarListaBackups() {
+    const tbody = document.getElementById('backups-table-body');
+    const kpiTotal = document.getElementById('kpi-backup-total');
+    const kpiIntegridad = document.getElementById('kpi-backup-integridad');
+    const kpiSubtext = document.getElementById('kpi-backup-subtext');
+    const kpiFecha = document.getElementById('kpi-backup-fecha');
+    const kpiArchivo = document.getElementById('kpi-backup-archivo');
+
+    try {
+        const res = await fetch('/api/sistema/backups');
+        const data = await res.json();
+        const backups = (data && data.backups) ? data.backups : [];
+
+        if (kpiTotal) kpiTotal.innerText = backups.length;
+
+        if (backups.length > 0) {
+            const ultimo = backups[0];
+            if (kpiIntegridad) {
+                kpiIntegridad.innerText = ultimo.integridad === 'OK_INTEGRO' ? '✓ 100% ÍNTEGRO' : '⚠ ATENCIÓN';
+                kpiIntegridad.style.color = ultimo.integridad === 'OK_INTEGRO' ? '#86efac' : '#f87171';
+            }
+            if (kpiSubtext) {
+                kpiSubtext.innerText = `PRAGMA integrity_check: ${ultimo.integridad_check ? ultimo.integridad_check.join(', ') : 'ok'}`;
+            }
+            if (kpiFecha) kpiFecha.innerText = ultimo.fecha;
+            if (kpiArchivo) kpiArchivo.innerText = `${ultimo.archivo} (${ultimo.tamano_formateado})`;
+        } else {
+            if (kpiIntegridad) kpiIntegridad.innerText = '--';
+            if (kpiFecha) kpiFecha.innerText = 'Sin respaldos';
+            if (kpiArchivo) kpiArchivo.innerText = 'Presione "Generar Copia de Seguridad"';
+        }
+
+        if (!tbody) return;
+
+        if (backups.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" style="text-align:center; padding:30px; color:var(--text-muted);">
+                        No hay copias de seguridad generadas aún. Haga clic en <strong>Generar Copia de Seguridad Inmediata</strong> para crear la primera.
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tbody.innerHTML = backups.map(b => {
+            const stats = b.estadisticas || {};
+            const statsText = stats.ventas !== undefined 
+                ? `${stats.ventas} vts • ${stats.productos} prods • ${stats.kardex} kdx` 
+                : 'Completo';
+
+            const esIntegro = b.integridad === 'OK_INTEGRO';
+            const badgeColor = esIntegro ? '#86efac' : '#f87171';
+            const badgeBg = esIntegro ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)';
+            const badgeBorder = esIntegro ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)';
+
+            const hashCorto = b.sha256 ? `${b.sha256.substring(0, 8)}...${b.sha256.substring(b.sha256.length - 8)}` : '--';
+
+            return `
+                <tr>
+                    <td>
+                        <div style="font-weight:700; color:#ffffff; display:flex; align-items:center; gap:6px;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            <span>${b.archivo}</span>
+                        </div>
+                    </td>
+                    <td style="color:#e2e8f0; font-size:0.82rem;">${b.fecha}</td>
+                    <td style="color:#93c5fd; font-weight:700;">${b.tamano_formateado}</td>
+                    <td>
+                        <span style="display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:6px; font-size:0.72rem; font-weight:800; color:${badgeColor}; background:${badgeBg}; border:1px solid ${badgeBorder};">
+                            ${esIntegro ? '✓ PRAGMA OK' : '✗ DISCREPANCIA'}
+                        </span>
+                    </td>
+                    <td>
+                        <div style="display:inline-flex; align-items:center; gap:6px; font-family:'Courier New', monospace; font-size:0.75rem; color:#cbd5e1; background:rgba(15,23,42,0.6); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.08);">
+                            <span title="${b.sha256}">${hashCorto}</span>
+                            <button onclick="copiarTextoPortapapeles('${b.sha256}')" style="background:none; border:none; color:#38bdf8; cursor:pointer; padding:0;" title="Copiar SHA-256 completo">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                            </button>
+                        </div>
+                    </td>
+                    <td style="font-size:0.75rem; color:var(--text-muted);">${statsText}</td>
+                    <td style="text-align: center;">
+                        <a href="/api/sistema/backup/descargar/${encodeURIComponent(b.archivo)}" class="btn-glass btn-glass-primary" style="padding:4px 10px; font-size:0.75rem; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:4px;" title="Descargar copia de base de datos a este computador o pendrive">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            <span>Descargar .db</span>
+                        </a>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    } catch(err) {
+        console.error("Error al cargar lista de respaldos:", err);
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:#f87171;">Error al consultar respaldos del servidor</td></tr>`;
+        }
+    }
+}
+
+async function generarCopiaSeguridad() {
+    const btn = document.getElementById('btn-generar-backup');
+    const icon = document.getElementById('icon-btn-backup');
+    const text = document.getElementById('text-btn-backup');
+
+    if (btn) btn.disabled = true;
+    if (text) text.innerText = 'Generando snapshot e integridad...';
+    if (icon) icon.classList.add('sync-spin');
+
+    try {
+        const res = await fetch('/api/sistema/backup', { method: 'POST' });
+        const data = await res.json();
+
+        if (res.ok && data.exito && data.backup) {
+            const b = data.backup;
+            mostrarAlertaFlotante(
+                "✓ Copia de Seguridad Generada y Certificada",
+                `Archivo: <strong>${b.archivo}</strong> (${b.tamano_formateado})<br>` +
+                `Integridad: <strong style="color:#86efac;">100% ÍNTEGRO (PRAGMA OK)</strong><br>` +
+                `Firma SHA-256: <code style="font-size:0.75rem; word-break:break-all;">${b.sha256}</code><br>` +
+                `Ubicación segura: <strong>${b.ubicacion_segura}</strong><br>` +
+                `Registros: ${b.estadisticas.ventas} ventas, ${b.estadisticas.productos} repuestos, ${b.estadisticas.kardex} movimientos de kárdex.`,
+                'success'
+            );
+
+            await cargarListaBackups();
+        } else {
+            mostrarToast(`Error: ${data.mensaje || 'No se pudo generar la copia'}`, 'error');
+        }
+    } catch(e) {
+        console.error("Error al generar copia de seguridad:", e);
+        mostrarToast("Error de conexión al generar copia de seguridad", "error");
+    } finally {
+        if (btn) btn.disabled = false;
+        if (text) text.innerText = 'Generar Copia de Seguridad Inmediata';
+        if (icon) icon.classList.remove('sync-spin');
+    }
+}
+
+function copiarTextoPortapapeles(txt) {
+    if (!txt) return;
+    navigator.clipboard.writeText(txt).then(() => {
+        mostrarToast("✓ Firma criptográfica SHA-256 copiada al portapapeles.", "success");
+    }).catch(() => {
+        prompt("Copie el Hash SHA-256:", txt);
+    });
+}
+

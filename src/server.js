@@ -20,6 +20,7 @@ const ComprasService = require('./services/comprasService');
 const TercerosService = require('./services/tercerosService');
 const ReportesService = require('./services/reportesService');
 const UnidigitalService = require('./services/unidigitalService');
+const BackupService = require('./services/backupService');
 const FiscalPrinter = require('./engine/printer');
 
 // Inicializar base de datos con datos semilla y triggers de inalterabilidad
@@ -300,6 +301,30 @@ const server = http.createServer(async (req, res) => {
         if (pathname === '/api/reportes/gerencial' && method === 'GET') {
             const rg = ReportesService.getResumenGerencial();
             return sendJSON(res, rg);
+        }
+
+        // --- COPIAS DE SEGURIDAD Y RESPALDO CRIPTOGRÁFICO ---
+        if (pathname === '/api/sistema/backup' && method === 'POST') {
+            const resultado = BackupService.generarBackup();
+            return sendJSON(res, { exito: true, backup: resultado });
+        }
+        if (pathname === '/api/sistema/backups' && method === 'GET') {
+            const backups = BackupService.listarBackups();
+            return sendJSON(res, { exito: true, backups });
+        }
+        if (pathname.startsWith('/api/sistema/backup/descargar/') && method === 'GET') {
+            const fileName = pathname.replace('/api/sistema/backup/descargar/', '');
+            const filePath = BackupService.getRutaBackupSegura(fileName);
+            const stat = fs.statSync(filePath);
+            res.writeHead(200, {
+                'Content-Type': 'application/x-sqlite3',
+                'Content-Length': stat.size,
+                'Content-Disposition': `attachment; filename="${path.basename(filePath)}"`,
+                'Access-Control-Allow-Origin': '*'
+            });
+            const readStream = fs.createReadStream(filePath);
+            readStream.pipe(res);
+            return;
         }
 
         if (pathname === '/api/inventario/upload-imagen' && method === 'POST') {
